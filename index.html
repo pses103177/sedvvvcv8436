@@ -3,811 +3,947 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>論文管理系統 - 終極版</title>
-    
-    <!-- Tailwind CSS -->
-    <script src="https://cdn.tailwindcss.com"></script>
-    
-    <!-- React & ReactDOM -->
-    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
-    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
-    
-    <!-- Babel Standalone -->
+    <title>學生會工作管理系統</title>
+    <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
-    
-    <!-- Recharts -->
-    <script src="https://unpkg.com/recharts@2.5.0/dist/Recharts.js"></script>
-    
-    <!-- Lucide Icons -->
+    <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
-    
-    <style>
-        body {
-            margin: 0;
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif;
-            -webkit-font-smoothing: antialiased;
-            -moz-osx-font-smoothing: grayscale;
-        }
-        
-        .lucide {
-            display: inline-block;
-            vertical-align: middle;
-        }
-    </style>
 </head>
 <body>
     <div id="root"></div>
 
     <script type="text/babel">
         const { useState, useEffect } = React;
-        const { AreaChart, Area, BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } = Recharts;
+        const { 
+            Calendar, Users, FileText, AlertCircle, CheckCircle, Clock, 
+            TrendingUp, Plus, Edit2, Trash2, Save, X, ChevronRight, 
+            Download, Upload, BarChart3, PieChart, Activity, Database 
+        } = lucide;
 
-        // Icon 組件
-        const Icon = ({ name, size = 24, className = '' }) => {
-            useEffect(() => {
-                lucide.createIcons();
+        // 學生會工作管理系統
+        function StudentUnionSystem() {
+            const [currentPage, setCurrentPage] = useState('dashboard');
+            const [data, setData] = useState({
+                meetings: [],
+                events: [],
+                attendance: [],
+                proposals: [],
+                calendar: [],
+                workRecords: [],
+                announcements: [],
+                tripRecords: [],
+                members: []
             });
-            return React.createElement('i', {
-                'data-lucide': name,
-                className: className,
-                style: { width: size, height: size }
-            });
-        };
 
-        const ThesisManager = () => {
-            const [activeTab, setActiveTab] = useState('dashboard');
-            const [chapters, setChapters] = useState([]);
-            const [goals, setGoals] = useState({ totalWords: 15000, deadline: '', dailyGoal: 500 });
-            const [writingSessions, setWritingSessions] = useState([]);
-            const [pomodoroCount, setPomodoroCount] = useState(0);
-            const [isWriting, setIsWriting] = useState(false);
-            const [currentSession, setCurrentSession] = useState(null);
-            const [pomodoroMode, setPomodoroMode] = useState(false);
-            const [pomodoroTime, setPomodoroTime] = useState(25 * 60);
-            const [isBreak, setIsBreak] = useState(false);
-            const [currentInspiration, setCurrentInspiration] = useState('');
-            const [showAddChapter, setShowAddChapter] = useState(false);
-            const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-            const [shareCode, setShareCode] = useState('');
-            const [showShareModal, setShowShareModal] = useState(false);
-            const [showAIAnalysis, setShowAIAnalysis] = useState(false);
-            const [aiSuggestions, setAiSuggestions] = useState([]);
-
-            const inspirations = [
-                "專注於一個小節，不要想整篇論文有多長",
-                "先寫下所有想法，再去修改和完善",
-                "每天固定時間寫作，養成習慣",
-                "設定小目標，完成一段就獎勵自己",
-                "不要追求完美初稿，重點是把想法寫下來",
-                "卡住時先跳過，寫其他部分",
-                "定期休息，讓大腦充電",
-                "與同學或老師討論，獲得新觀點",
-                "閱讀相關文獻，激發靈感",
-                "用自己的話重述觀點，避免抄襲",
-                "建立大綱，讓寫作有方向",
-                "記錄每天進度，看見成長",
-                "保持好奇心，享受研究過程",
-                "相信自己，你能完成的！",
-                "休息不是浪費時間，是為了更好的產出"
-            ];
-
+            // 載入數據
             useEffect(() => {
                 loadData();
-                setCurrentInspiration(inspirations[Math.floor(Math.random() * inspirations.length)]);
-                lucide.createIcons();
             }, []);
 
-            const loadData = () => {
+            const loadData = async () => {
                 try {
-                    const savedChapters = localStorage.getItem('thesis_chapters');
-                    const savedGoals = localStorage.getItem('thesis_goals');
-                    const savedSessions = localStorage.getItem('thesis_sessions');
-                    const savedPomodoro = localStorage.getItem('thesis_pomodoro_count');
-
-                    if (savedChapters) setChapters(JSON.parse(savedChapters));
-                    if (savedGoals) setGoals(JSON.parse(savedGoals));
-                    if (savedSessions) setWritingSessions(JSON.parse(savedSessions));
-                    if (savedPomodoro) setPomodoroCount(JSON.parse(savedPomodoro));
-                } catch (error) {
-                    console.log('首次使用');
-                }
-            };
-
-            const saveData = (key, value) => {
-                try {
-                    localStorage.setItem(key, JSON.stringify(value));
-                } catch (error) {
-                    console.error('儲存失敗:', error);
-                }
-            };
-
-            const addChapter = (title, targetWords, notes = '') => {
-                const chapter = {
-                    id: Date.now(),
-                    title,
-                    targetWords: parseInt(targetWords) || 0,
-                    currentWords: 0,
-                    notes,
-                    createdAt: new Date().toISOString()
-                };
-                const updated = [...chapters, chapter];
-                setChapters(updated);
-                saveData('thesis_chapters', updated);
-            };
-
-            const updateChapter = (id, field, value) => {
-                const updated = chapters.map(ch =>
-                    ch.id === id ? { ...ch, [field]: field.includes('Words') ? parseInt(value) || 0 : value } : ch
-                );
-                setChapters(updated);
-                saveData('thesis_chapters', updated);
-            };
-
-            const deleteChapter = (id) => {
-                const updated = chapters.filter(ch => ch.id !== id);
-                setChapters(updated);
-                saveData('thesis_chapters', updated);
-            };
-
-            const startPomodoro = () => {
-                setPomodoroMode(true);
-                setPomodoroTime(25 * 60);
-                setIsBreak(false);
-                startWriting();
-            };
-
-            const completePomodoroSession = () => {
-                const newCount = pomodoroCount + 1;
-                setPomodoroCount(newCount);
-                saveData('thesis_pomodoro_count', newCount);
-                setPomodoroMode(false);
-                setIsBreak(true);
-            };
-
-            const startWriting = () => {
-                const session = { id: Date.now(), startTime: new Date().toISOString() };
-                setCurrentSession(session);
-                setIsWriting(true);
-            };
-
-            const stopWriting = (wordsWritten = 0) => {
-                if (!currentSession) return;
-                
-                const endTime = new Date();
-                const startTime = new Date(currentSession.startTime);
-                const duration = Math.floor((endTime - startTime) / 60000);
-                
-                const completedSession = {
-                    ...currentSession,
-                    endTime: endTime.toISOString(),
-                    duration,
-                    wordsWritten: parseInt(wordsWritten) || 0
-                };
-                
-                const updated = [...writingSessions, completedSession];
-                setWritingSessions(updated);
-                saveData('thesis_sessions', updated);
-                
-                setCurrentSession(null);
-                setIsWriting(false);
-                setPomodoroMode(false);
-            };
-
-            const refreshInspiration = () => {
-                const newInspiration = inspirations[Math.floor(Math.random() * inspirations.length)];
-                setCurrentInspiration(newInspiration);
-            };
-
-            const generateShareCode = () => {
-                const code = 'SHARE' + Date.now().toString(36).toUpperCase();
-                setShareCode(code);
-                setShowShareModal(true);
-            };
-
-            const analyzeWithAI = () => {
-                const suggestions = [];
-                
-                if (chapters.length === 0) {
-                    suggestions.push({ icon: '🏗️', text: '建議建立論文大綱，有助於組織思路和內容結構' });
-                }
-                
-                const progress = totalTargetWords > 0 ? (totalCurrentWords / totalTargetWords) * 100 : 0;
-                if (progress < 20 && daysLeft && daysLeft < 30) {
-                    suggestions.push({ icon: '⚠️', text: '進度較慢且時間緊迫，建議增加每日寫作時間' });
-                }
-                
-                if (writingSessions.length > 10) {
-                    const avgSession = totalWritingTime / writingSessions.length;
-                    if (avgSession < 20) {
-                        suggestions.push({ icon: '⏱️', text: `平均每次寫作 ${avgSession.toFixed(0)} 分鐘，建議延長至 25-45 分鐘以提升效率` });
+                    const result = await window.storage.get('student-union-data');
+                    if (result) {
+                        setData(JSON.parse(result.value));
                     }
+                } catch (error) {
+                    console.log('初次使用，創建新數據');
                 }
-                
-                if (progress > 50) {
-                    suggestions.push({ icon: '🎉', text: '已完成一半以上！繼續保持，勝利在望！' });
+            };
+
+            const saveData = async (newData) => {
+                setData(newData);
+                try {
+                    await window.storage.set('student-union-data', JSON.stringify(newData));
+                } catch (error) {
+                    console.error('保存數據失敗:', error);
                 }
-                
-                if (pomodoroCount > 10) {
-                    suggestions.push({ icon: '🍅', text: `已完成 ${pomodoroCount} 個番茄鐘，專注力很棒！` });
+            };
+
+            // 匯出資料
+            const exportData = () => {
+                const dataStr = JSON.stringify(data, null, 2);
+                const dataBlob = new Blob([dataStr], { type: 'application/json' });
+                const url = URL.createObjectURL(dataBlob);
+                const link = document.createElement('a');
+                link.href = url;
+                link.download = `學生會資料_${new Date().toISOString().split('T')[0]}.json`;
+                link.click();
+            };
+
+            // 匯入資料
+            const importData = (event) => {
+                const file = event.target.files[0];
+                if (file) {
+                    const reader = new FileReader();
+                    reader.onload = (e) => {
+                        try {
+                            const importedData = JSON.parse(e.target.result);
+                            saveData(importedData);
+                            alert('資料匯入成功！');
+                        } catch (error) {
+                            alert('資料格式錯誤，匯入失敗！');
+                        }
+                    };
+                    reader.readAsText(file);
                 }
-                
-                setAiSuggestions(suggestions.length > 0 ? suggestions : [
-                    { icon: '💡', text: '繼續累積寫作數據，AI 將提供更精準的建議' }
-                ]);
-                setShowAIAnalysis(true);
             };
 
-            const exportReport = () => {
-                const reportText = `
-論文進度報告
-生成時間：${new Date().toLocaleString('zh-TW')}
-
-=== 總體進度 ===
-完成度：${progress.toFixed(1)}%
-目前字數：${totalCurrentWords} / ${totalTargetWords}
-
-=== 寫作統計 ===
-總寫作次數：${writingSessions.length} 次
-總寫作時間：${totalWritingTime} 分鐘
-番茄鐘完成：${pomodoroCount} 個
-
-=== 章節明細 ===
-${chapters.map(ch => `${ch.title}: ${ch.currentWords}/${ch.targetWords}`).join('\n')}
-                `.trim();
-
-                const blob = new Blob([reportText], { type: 'text/plain;charset=utf-8' });
-                const url = URL.createObjectURL(blob);
-                const a = document.createElement('a');
-                a.href = url;
-                a.download = `論文進度報告_${new Date().toISOString().split('T')[0]}.txt`;
-                a.click();
-            };
-
-            const totalCurrentWords = chapters.reduce((sum, ch) => sum + ch.currentWords, 0);
-            const totalTargetWords = chapters.reduce((sum, ch) => sum + ch.targetWords, 0) || goals.totalWords;
-            const progress = totalTargetWords > 0 ? (totalCurrentWords / totalTargetWords) * 100 : 0;
-            const daysLeft = goals.deadline ? Math.ceil((new Date(goals.deadline) - new Date()) / (1000 * 60 * 60 * 24)) : null;
-            const totalWritingTime = writingSessions.reduce((sum, s) => sum + s.duration, 0);
-
-            const getLast7DaysData = () => {
-                const last7Days = [];
-                for (let i = 6; i >= 0; i--) {
-                    const date = new Date();
-                    date.setDate(date.getDate() - i);
-                    const dateStr = date.toISOString().split('T')[0];
-                    const sessionsOnDay = writingSessions.filter(s => s.startTime.split('T')[0] === dateStr);
-                    last7Days.push({
-                        date: `${date.getMonth() + 1}/${date.getDate()}`,
-                        words: sessionsOnDay.reduce((sum, s) => sum + s.wordsWritten, 0),
-                    });
+            const renderPage = () => {
+                switch (currentPage) {
+                    case 'dashboard':
+                        return <Dashboard data={data} setCurrentPage={setCurrentPage} />;
+                    case 'statistics':
+                        return <Statistics data={data} />;
+                    case 'database':
+                        return <DatabaseManagement data={data} saveData={saveData} />;
+                    case 'meeting-attendance':
+                        return <MeetingAttendance data={data} saveData={saveData} />;
+                    case 'event-booth':
+                        return <EventBooth data={data} saveData={saveData} />;
+                    case 'event-attendance':
+                        return <EventAttendance data={data} saveData={saveData} />;
+                    case 'event-management':
+                        return <EventManagement data={data} saveData={saveData} />;
+                    case 'admin-process':
+                        return <AdminProcess data={data} saveData={saveData} />;
+                    case 'calendar':
+                        return <CalendarView data={data} saveData={saveData} />;
+                    case 'trip-record':
+                        return <TripRecord data={data} saveData={saveData} />;
+                    case 'work-record':
+                        return <WorkRecord data={data} saveData={saveData} />;
+                    case 'announcements':
+                        return <Announcements data={data} saveData={saveData} />;
+                    default:
+                        return <Dashboard data={data} setCurrentPage={setCurrentPage} />;
                 }
-                return last7Days;
-            };
-
-            const getChapterProgressData = () => {
-                return chapters.map(ch => ({
-                    name: ch.title.length > 12 ? ch.title.substring(0, 12) + '...' : ch.title,
-                    completed: ch.currentWords,
-                    remaining: Math.max(0, ch.targetWords - ch.currentWords),
-                }));
-            };
-
-            const ChapterForm = ({ onSubmit, onCancel }) => {
-                const [title, setTitle] = useState('');
-                const [targetWords, setTargetWords] = useState('');
-                const [notes, setNotes] = useState('');
-
-                return (
-                    <div className="bg-indigo-50 rounded-lg p-4 mb-6 border-2 border-indigo-200">
-                        <h3 className="font-semibold text-gray-800 mb-3">新增章節</h3>
-                        <div className="grid md:grid-cols-2 gap-4 mb-4">
-                            <input
-                                type="text"
-                                placeholder="章節標題"
-                                value={title}
-                                onChange={(e) => setTitle(e.target.value)}
-                                className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500"
-                            />
-                            <input
-                                type="number"
-                                placeholder="目標字數"
-                                value={targetWords}
-                                onChange={(e) => setTargetWords(e.target.value)}
-                                className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500"
-                            />
-                        </div>
-                        <textarea
-                            placeholder="備註（選填）"
-                            value={notes}
-                            onChange={(e) => setNotes(e.target.value)}
-                            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 mb-3"
-                            rows="2"
-                        />
-                        <div className="flex gap-2">
-                            <button
-                                onClick={() => onSubmit(title, targetWords, notes)}
-                                className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 flex items-center gap-2"
-                            >
-                                <Icon name="save" size={18} />
-                                儲存
-                            </button>
-                            <button
-                                onClick={onCancel}
-                                className="px-4 py-2 bg-gray-300 text-gray-700 rounded-lg hover:bg-gray-400"
-                            >
-                                取消
-                            </button>
-                        </div>
-                    </div>
-                );
-            };
-
-            const ChapterCard = ({ chapter }) => (
-                <div className="border-2 border-gray-200 rounded-lg p-4 hover:border-indigo-300 transition-colors">
-                    <div className="flex items-start justify-between mb-3">
-                        <div className="flex-1">
-                            <h3 className="text-lg font-semibold text-gray-800">{chapter.title}</h3>
-                            {chapter.notes && <p className="text-sm text-gray-600 mt-1">{chapter.notes}</p>}
-                        </div>
-                        <button
-                            onClick={() => deleteChapter(chapter.id)}
-                            className="text-red-500 hover:text-red-700 p-2"
-                        >
-                            <Icon name="trash-2" size={18} />
-                        </button>
-                    </div>
-
-                    <div className="grid md:grid-cols-2 gap-4 mb-3">
-                        <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">已完成字數</label>
-                            <input
-                                type="number"
-                                value={chapter.currentWords}
-                                onChange={(e) => updateChapter(chapter.id, 'currentWords', e.target.value)}
-                                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500"
-                            />
-                        </div>
-                        <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">目標字數</label>
-                            <input
-                                type="number"
-                                value={chapter.targetWords}
-                                onChange={(e) => updateChapter(chapter.id, 'targetWords', e.target.value)}
-                                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500"
-                            />
-                        </div>
-                    </div>
-
-                    <div className="flex items-center gap-3">
-                        <div className="flex-1 bg-gray-200 rounded-full h-2">
-                            <div
-                                className="bg-gradient-to-r from-green-400 to-blue-500 h-2 rounded-full transition-all"
-                                style={{ width: `${Math.min((chapter.currentWords / chapter.targetWords) * 100, 100)}%` }}
-                            />
-                        </div>
-                        <span className="text-sm font-semibold text-gray-700 min-w-[60px] text-right">
-                            {chapter.targetWords > 0 ? `${((chapter.currentWords / chapter.targetWords) * 100).toFixed(0)}%` : '0%'}
-                        </span>
-                    </div>
-                </div>
-            );
-
-            const PomodoroTimer = ({ initialTime, onComplete, onStop }) => {
-                const [timeLeft, setTimeLeft] = useState(initialTime);
-                const [words, setWords] = useState('');
-
-                useEffect(() => {
-                    const interval = setInterval(() => {
-                        setTimeLeft(prev => {
-                            if (prev <= 1) {
-                                clearInterval(interval);
-                                onComplete();
-                                return 0;
-                            }
-                            return prev - 1;
-                        });
-                    }, 1000);
-
-                    return () => clearInterval(interval);
-                }, []);
-
-                const formatTime = (seconds) => {
-                    const m = Math.floor(seconds / 60);
-                    const s = seconds % 60;
-                    return `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
-                };
-
-                const progress = ((initialTime - timeLeft) / initialTime) * 100;
-
-                return (
-                    <div>
-                        <div className="relative mb-8">
-                            <svg className="w-64 h-64 mx-auto" viewBox="0 0 200 200">
-                                <circle cx="100" cy="100" r="90" fill="none" stroke="#e5e7eb" strokeWidth="12" />
-                                <circle
-                                    cx="100"
-                                    cy="100"
-                                    r="90"
-                                    fill="none"
-                                    stroke="#f97316"
-                                    strokeWidth="12"
-                                    strokeDasharray={`${2 * Math.PI * 90}`}
-                                    strokeDashoffset={`${2 * Math.PI * 90 * (1 - progress / 100)}`}
-                                    transform="rotate(-90 100 100)"
-                                    className="transition-all duration-1000"
-                                />
-                            </svg>
-                            <div className="absolute inset-0 flex items-center justify-center">
-                                <div className="text-6xl font-bold text-gray-800">{formatTime(timeLeft)}</div>
-                            </div>
-                        </div>
-                        
-                        <div className="mb-6">
-                            <label className="block text-sm font-medium text-gray-700 mb-2">完成字數（選填）</label>
-                            <input
-                                type="number"
-                                value={words}
-                                onChange={(e) => setWords(e.target.value)}
-                                placeholder="輸入字數"
-                                className="w-full max-w-xs mx-auto px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500"
-                            />
-                        </div>
-                        
-                        <button
-                            onClick={() => onStop(words)}
-                            className="flex items-center gap-3 px-8 py-4 bg-gradient-to-r from-red-500 to-orange-500 text-white rounded-full text-xl font-semibold mx-auto hover:shadow-lg transition-all"
-                        >
-                            <Icon name="pause-circle" size={32} />
-                            提前結束
-                        </button>
-                    </div>
-                );
             };
 
             return (
-                <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 p-6">
-                    <div className="max-w-7xl mx-auto">
-                        {/* 標題列 */}
-                        <div className="bg-white rounded-2xl shadow-xl p-6 mb-6">
-                            <div className="flex items-center justify-between">
-                                <div className="flex-1">
-                                    <h1 className="text-4xl font-bold text-gray-800 mb-2 flex items-center gap-3">
-                                        <Icon name="book-open" size={40} className="text-indigo-600" />
-                                        論文管理系統
-                                    </h1>
-                                    <p className="text-gray-600">AI 智能管理，助你順利完成論文</p>
+                <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50">
+                    {/* 頂部導航 */}
+                    <nav className="bg-white shadow-lg border-b-4 border-indigo-500">
+                        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                            <div className="flex justify-between items-center h-20">
+                                <div className="flex items-center space-x-4">
+                                    <div className="w-12 h-12 bg-gradient-to-br from-indigo-600 to-purple-600 rounded-xl flex items-center justify-center shadow-lg transform rotate-12">
+                                        <Users className="w-7 h-7 text-white -rotate-12" />
+                                    </div>
+                                    <div>
+                                        <h1 className="text-2xl font-bold bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent">
+                                            學生會工作管理系統
+                                        </h1>
+                                        <p className="text-sm text-gray-500">Student Union Management System</p>
+                                    </div>
                                 </div>
-                                <button
-                                    onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-                                    className="md:hidden p-2 text-gray-600 hover:bg-gray-100 rounded-lg"
-                                >
-                                    <Icon name={mobileMenuOpen ? 'x' : 'menu'} size={24} />
-                                </button>
-                                <button
-                                    onClick={exportReport}
-                                    className="hidden md:flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-green-500 to-teal-500 text-white rounded-lg hover:shadow-lg transition-all"
-                                >
-                                    <Icon name="download" size={20} />
-                                    匯出報告
-                                </button>
-                            </div>
-                        </div>
-
-                        {/* 分頁導航 */}
-                        <div className={`bg-white rounded-2xl shadow-xl p-2 mb-6 ${mobileMenuOpen ? 'block' : 'hidden md:block'}`}>
-                            <div className="grid grid-cols-2 md:flex md:flex-wrap gap-2">
-                                {[
-                                    { id: 'dashboard', label: '總覽', icon: 'trending-up' },
-                                    { id: 'chapters', label: '章節', icon: 'book-open' },
-                                    { id: 'pomodoro', label: '番茄鐘', icon: 'coffee' },
-                                ].map((tab) => (
+                                <div className="flex items-center space-x-3">
                                     <button
-                                        key={tab.id}
-                                        onClick={() => {
-                                            setActiveTab(tab.id);
-                                            setMobileMenuOpen(false);
-                                        }}
-                                        className={`flex items-center justify-center gap-2 px-4 py-3 rounded-lg font-semibold transition-all ${
-                                            activeTab === tab.id
-                                                ? 'bg-gradient-to-r from-indigo-600 to-purple-600 text-white shadow-lg'
-                                                : 'text-gray-600 hover:bg-gray-100'
-                                        }`}
+                                        onClick={() => setCurrentPage('statistics')}
+                                        className="px-4 py-2 bg-purple-100 text-purple-700 rounded-lg hover:bg-purple-200 transition-all font-medium flex items-center space-x-2"
                                     >
-                                        <Icon name={tab.icon} size={20} />
-                                        <span className="hidden sm:inline">{tab.label}</span>
+                                        <BarChart3 className="w-4 h-4" />
+                                        <span>統計資訊</span>
                                     </button>
-                                ))}
+                                    <button
+                                        onClick={() => setCurrentPage('database')}
+                                        className="px-4 py-2 bg-green-100 text-green-700 rounded-lg hover:bg-green-200 transition-all font-medium flex items-center space-x-2"
+                                    >
+                                        <Database className="w-4 h-4" />
+                                        <span>資料庫</span>
+                                    </button>
+                                    <button
+                                        onClick={exportData}
+                                        className="px-4 py-2 bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200 transition-all font-medium flex items-center space-x-2"
+                                    >
+                                        <Download className="w-4 h-4" />
+                                        <span>匯出</span>
+                                    </button>
+                                    <label className="px-4 py-2 bg-orange-100 text-orange-700 rounded-lg hover:bg-orange-200 transition-all font-medium flex items-center space-x-2 cursor-pointer">
+                                        <Upload className="w-4 h-4" />
+                                        <span>匯入</span>
+                                        <input type="file" accept=".json" onChange={importData} className="hidden" />
+                                    </label>
+                                    <button 
+                                        onClick={() => setCurrentPage('dashboard')}
+                                        className="px-6 py-2 bg-indigo-100 text-indigo-700 rounded-lg hover:bg-indigo-200 transition-all font-medium"
+                                    >
+                                        返回主頁
+                                    </button>
+                                </div>
                             </div>
                         </div>
+                    </nav>
 
-                        {/* 內容區域 */}
-                        <div>
-                            {activeTab === 'dashboard' && (
-                                <div className="space-y-6">
-                                    {/* 靈感卡片 */}
-                                    <div className="bg-gradient-to-r from-yellow-400 to-orange-400 rounded-xl shadow-lg p-6 text-white">
-                                        <div className="flex items-start justify-between gap-3">
-                                            <div className="flex-1">
-                                                <div className="flex items-center gap-2 mb-2">
-                                                    <Icon name="sparkles" size={24} />
-                                                    <h3 className="text-xl font-bold">今日靈感</h3>
-                                                </div>
-                                                <p className="text-lg">{currentInspiration}</p>
-                                            </div>
-                                            <button
-                                                onClick={refreshInspiration}
-                                                className="p-2 bg-white/20 rounded-lg hover:bg-white/30 transition-all"
-                                            >
-                                                <Icon name="refresh-cw" size={20} />
-                                            </button>
+                    {/* 主要內容 */}
+                    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+                        {renderPage()}
+                    </div>
+
+                    {/* 版權資訊 */}
+                    <footer className="text-center py-8 text-gray-500 text-sm">
+                        <p>© 2026 學生會工作管理系統 - 提升效率，記錄每一刻</p>
+                    </footer>
+                </div>
+            );
+        }
+
+        // 統計資訊面板
+        function Statistics({ data }) {
+            const stats = {
+                totalMeetings: data.meetings?.length || 0,
+                totalEvents: data.events?.length || 0,
+                totalProposals: data.proposals?.length || 0,
+                totalWorkRecords: data.workRecords?.length || 0,
+                totalTripRecords: data.tripRecords?.length || 0,
+                totalAnnouncements: data.announcements?.length || 0,
+                totalMembers: data.members?.length || 0,
+                totalAttendance: data.attendance?.length || 0
+            };
+
+            const currentMonth = new Date().getMonth();
+            const currentYear = new Date().getFullYear();
+            const thisMonthEvents = data.events?.filter(event => {
+                const eventDate = new Date(event.date);
+                return eventDate.getMonth() === currentMonth && eventDate.getFullYear() === currentYear;
+            }).length || 0;
+
+            const pendingProposals = data.proposals?.filter(p => p.status === '待審核').length || 0;
+
+            const financeStats = data.announcements?.filter(a => a.type === '經費收支').reduce((acc, curr) => {
+                if (curr.category === 'income') {
+                    acc.income += parseFloat(curr.amount || 0);
+                } else if (curr.category === 'expense') {
+                    acc.expense += parseFloat(curr.amount || 0);
+                }
+                return acc;
+            }, { income: 0, expense: 0 });
+
+            const balance = (financeStats?.income || 0) - (financeStats?.expense || 0);
+
+            const statCards = [
+                { title: '總會議數', value: stats.totalMeetings, icon: Users, color: 'from-blue-500 to-cyan-500', textColor: 'text-blue-700' },
+                { title: '總活動數', value: stats.totalEvents, icon: Calendar, color: 'from-purple-500 to-pink-500', textColor: 'text-purple-700' },
+                { title: '本月活動', value: thisMonthEvents, icon: Activity, color: 'from-green-500 to-emerald-500', textColor: 'text-green-700' },
+                { title: '待審提案', value: pendingProposals, icon: AlertCircle, color: 'from-orange-500 to-red-500', textColor: 'text-orange-700' },
+                { title: '工作紀錄', value: stats.totalWorkRecords, icon: Clock, color: 'from-pink-500 to-rose-500', textColor: 'text-pink-700' },
+                { title: '出差紀錄', value: stats.totalTripRecords, icon: FileText, color: 'from-yellow-500 to-orange-500', textColor: 'text-yellow-700' },
+                { title: '公告數量', value: stats.totalAnnouncements, icon: AlertCircle, color: 'from-red-500 to-pink-500', textColor: 'text-red-700' },
+                { title: '成員總數', value: stats.totalMembers, icon: Users, color: 'from-indigo-500 to-purple-500', textColor: 'text-indigo-700' }
+            ];
+
+            return (
+                <div className="space-y-8">
+                    <div className="text-center space-y-4">
+                        <h2 className="text-4xl font-bold text-gray-800">統計資訊</h2>
+                        <p className="text-xl text-gray-600">全面掌握學生會運作狀況</p>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                        {statCards.map((card, index) => {
+                            const Icon = card.icon;
+                            return (
+                                <div key={index} className="bg-white rounded-2xl shadow-lg p-6 hover:shadow-xl transition-all">
+                                    <div className="flex items-start justify-between mb-4">
+                                        <div className={`w-12 h-12 bg-gradient-to-br ${card.color} rounded-xl flex items-center justify-center shadow-lg`}>
+                                            <Icon className="w-6 h-6 text-white" />
                                         </div>
                                     </div>
-
-                                    {/* 進度卡片 */}
-                                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                                        <div className="bg-gradient-to-br from-indigo-500 to-purple-600 rounded-xl shadow-lg p-6 text-white">
-                                            <div className="flex items-center justify-between mb-2">
-                                                <h3 className="text-lg font-semibold">總進度</h3>
-                                                <Icon name="trending-up" size={24} />
-                                            </div>
-                                            <div className="text-4xl font-bold">{progress.toFixed(1)}%</div>
-                                            <div className="mt-3 bg-white/20 rounded-full h-2">
-                                                <div className="bg-white h-2 rounded-full transition-all" style={{ width: `${Math.min(progress, 100)}%` }} />
-                                            </div>
-                                        </div>
-
-                                        <div className="bg-gradient-to-br from-blue-500 to-cyan-600 rounded-xl shadow-lg p-6 text-white">
-                                            <div className="flex items-center justify-between mb-2">
-                                                <h3 className="text-lg font-semibold">字數</h3>
-                                                <Icon name="book-open" size={24} />
-                                            </div>
-                                            <div className="text-4xl font-bold">{totalCurrentWords.toLocaleString()}</div>
-                                            <div className="text-sm mt-1 opacity-90">/ {totalTargetWords.toLocaleString()}</div>
-                                        </div>
-
-                                        <div className="bg-gradient-to-br from-orange-500 to-red-600 rounded-xl shadow-lg p-6 text-white">
-                                            <div className="flex items-center justify-between mb-2">
-                                                <h3 className="text-lg font-semibold">番茄鐘</h3>
-                                                <Icon name="coffee" size={24} />
-                                            </div>
-                                            <div className="text-4xl font-bold">{pomodoroCount}</div>
-                                            <div className="text-sm mt-1 opacity-90">已完成</div>
-                                        </div>
-
-                                        <div className="bg-gradient-to-br from-green-500 to-teal-600 rounded-xl shadow-lg p-6 text-white">
-                                            <div className="flex items-center justify-between mb-2">
-                                                <h3 className="text-lg font-semibold">時間</h3>
-                                                <Icon name="clock" size={24} />
-                                            </div>
-                                            <div className="text-4xl font-bold">{totalWritingTime}</div>
-                                            <div className="text-sm mt-1 opacity-90">分鐘</div>
-                                        </div>
-                                    </div>
-
-                                    {/* 圖表 */}
-                                    <div className="grid md:grid-cols-2 gap-6">
-                                        <div className="bg-white rounded-xl shadow-lg p-6">
-                                            <h3 className="text-xl font-bold text-gray-800 mb-4">近 7 天趨勢</h3>
-                                            <ResponsiveContainer width="100%" height={250}>
-                                                <AreaChart data={getLast7DaysData()}>
-                                                    <defs>
-                                                        <linearGradient id="colorWords" x1="0" y1="0" x2="0" y2="1">
-                                                            <stop offset="5%" stopColor="#6366f1" stopOpacity={0.8}/>
-                                                            <stop offset="95%" stopColor="#6366f1" stopOpacity={0}/>
-                                                        </linearGradient>
-                                                    </defs>
-                                                    <CartesianGrid strokeDasharray="3 3" />
-                                                    <XAxis dataKey="date" />
-                                                    <YAxis />
-                                                    <Tooltip />
-                                                    <Area type="monotone" dataKey="words" stroke="#6366f1" fillOpacity={1} fill="url(#colorWords)" />
-                                                </AreaChart>
-                                            </ResponsiveContainer>
-                                        </div>
-
-                                        <div className="bg-white rounded-xl shadow-lg p-6">
-                                            <h3 className="text-xl font-bold text-gray-800 mb-4">章節進度</h3>
-                                            <ResponsiveContainer width="100%" height={250}>
-                                                <BarChart data={getChapterProgressData()}>
-                                                    <CartesianGrid strokeDasharray="3 3" />
-                                                    <XAxis dataKey="name" />
-                                                    <YAxis />
-                                                    <Tooltip />
-                                                    <Legend />
-                                                    <Bar dataKey="completed" stackId="a" fill="#10b981" name="已完成" />
-                                                    <Bar dataKey="remaining" stackId="a" fill="#e5e7eb" name="剩餘" />
-                                                </BarChart>
-                                            </ResponsiveContainer>
-                                        </div>
-                                    </div>
-
-                                    {/* 快速動作 */}
-                                    <div className="bg-white rounded-xl shadow-lg p-6">
-                                        <h3 className="text-xl font-bold text-gray-800 mb-4">快速開始</h3>
-                                        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                                            <button
-                                                onClick={() => setActiveTab('pomodoro')}
-                                                className="flex flex-col items-center justify-center gap-3 p-4 bg-gradient-to-r from-orange-500 to-red-500 text-white rounded-lg hover:shadow-lg transition-all"
-                                            >
-                                                <Icon name="coffee" size={24} />
-                                                <span className="font-semibold">番茄鐘</span>
-                                            </button>
-                                            <button
-                                                onClick={analyzeWithAI}
-                                                className="flex flex-col items-center justify-center gap-3 p-4 bg-gradient-to-r from-purple-500 to-pink-500 text-white rounded-lg hover:shadow-lg transition-all"
-                                            >
-                                                <Icon name="brain" size={24} />
-                                                <span className="font-semibold">AI 分析</span>
-                                            </button>
-                                            <button
-                                                onClick={generateShareCode}
-                                                className="flex flex-col items-center justify-center gap-3 p-4 bg-gradient-to-r from-blue-500 to-cyan-500 text-white rounded-lg hover:shadow-lg transition-all"
-                                            >
-                                                <Icon name="share-2" size={24} />
-                                                <span className="font-semibold">分享</span>
-                                            </button>
-                                            <button
-                                                onClick={exportReport}
-                                                className="flex flex-col items-center justify-center gap-3 p-4 bg-gradient-to-r from-green-500 to-teal-500 text-white rounded-lg hover:shadow-lg transition-all"
-                                            >
-                                                <Icon name="download" size={24} />
-                                                <span className="font-semibold">匯出</span>
-                                            </button>
-                                        </div>
+                                    <div>
+                                        <p className="text-gray-600 text-sm mb-1">{card.title}</p>
+                                        <p className={`text-4xl font-bold ${card.textColor}`}>{card.value}</p>
                                     </div>
                                 </div>
-                            )}
+                            );
+                        })}
+                    </div>
 
-                            {activeTab === 'chapters' && (
-                                <div className="bg-white rounded-xl shadow-lg p-6">
-                                    <div className="flex items-center justify-between mb-6">
-                                        <h2 className="text-2xl font-bold text-gray-800">章節管理</h2>
-                                        <button
-                                            onClick={() => setShowAddChapter(!showAddChapter)}
-                                            className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700"
-                                        >
-                                            <Icon name="plus" size={20} />
-                                            新增章節
-                                        </button>
-                                    </div>
-
-                                    {showAddChapter && (
-                                        <ChapterForm
-                                            onSubmit={(title, targetWords, notes) => {
-                                                addChapter(title, targetWords, notes);
-                                                setShowAddChapter(false);
-                                            }}
-                                            onCancel={() => setShowAddChapter(false)}
-                                        />
-                                    )}
-
-                                    {chapters.length === 0 ? (
-                                        <div className="text-center py-12 text-gray-500">
-                                            <Icon name="book-open" size={48} className="mx-auto mb-3 opacity-50" />
-                                            <p>尚未新增章節</p>
-                                        </div>
-                                    ) : (
-                                        <div className="space-y-4">
-                                            {chapters.map((chapter) => (
-                                                <ChapterCard key={chapter.id} chapter={chapter} />
-                                            ))}
-                                        </div>
-                                    )}
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                        <div className="bg-white rounded-2xl shadow-lg p-6">
+                            <div className="flex items-center space-x-3 mb-4">
+                                <div className="w-12 h-12 bg-gradient-to-br from-green-500 to-emerald-500 rounded-xl flex items-center justify-center">
+                                    <TrendingUp className="w-6 h-6 text-white" />
                                 </div>
-                            )}
-
-                            {activeTab === 'pomodoro' && (
-                                <div className="bg-white rounded-xl shadow-lg p-8 text-center">
-                                    <h2 className="text-3xl font-bold text-gray-800 mb-6 flex items-center justify-center gap-3">
-                                        <Icon name="coffee" size={36} className="text-orange-500" />
-                                        番茄鐘工作法
-                                    </h2>
-                                    
-                                    {!pomodoroMode && !isBreak ? (
-                                        <div>
-                                            <div className="text-6xl font-bold text-gray-400 mb-8">25:00</div>
-                                            <p className="text-gray-600 mb-6">專注 25 分鐘，然後休息 5 分鐘</p>
-                                            <button
-                                                onClick={startPomodoro}
-                                                className="flex items-center gap-3 px-8 py-4 bg-gradient-to-r from-orange-500 to-red-500 text-white rounded-full text-xl font-semibold mx-auto hover:shadow-lg transition-all"
-                                            >
-                                                <Icon name="play-circle" size={32} />
-                                                開始番茄鐘
-                                            </button>
-                                            <div className="mt-8 text-gray-600">
-                                                <p className="font-semibold">已完成 {pomodoroCount} 個番茄鐘 🍅</p>
-                                            </div>
-                                        </div>
-                                    ) : isBreak ? (
-                                        <div>
-                                            <div className="text-6xl font-bold text-green-600 mb-8">休息時間 ☕</div>
-                                            <p className="text-lg text-gray-600 mb-6">做得好！休息一下，補充能量</p>
-                                            <button
-                                                onClick={() => { setIsBreak(false); setPomodoroMode(false); }}
-                                                className="px-6 py-3 bg-green-500 text-white rounded-lg hover:bg-green-600"
-                                            >
-                                                結束休息
-                                            </button>
-                                        </div>
-                                    ) : (
-                                        <PomodoroTimer
-                                            initialTime={pomodoroTime}
-                                            onComplete={completePomodoroSession}
-                                            onStop={stopWriting}
-                                        />
-                                    )}
+                                <div>
+                                    <p className="text-gray-600 text-sm">總收入</p>
+                                    <p className="text-2xl font-bold text-green-700">NT$ {financeStats?.income?.toLocaleString() || 0}</p>
                                 </div>
-                            )}
+                            </div>
+                        </div>
+                        <div className="bg-white rounded-2xl shadow-lg p-6">
+                            <div className="flex items-center space-x-3 mb-4">
+                                <div className="w-12 h-12 bg-gradient-to-br from-red-500 to-pink-500 rounded-xl flex items-center justify-center">
+                                    <TrendingUp className="w-6 h-6 text-white transform rotate-180" />
+                                </div>
+                                <div>
+                                    <p className="text-gray-600 text-sm">總支出</p>
+                                    <p className="text-2xl font-bold text-red-700">NT$ {financeStats?.expense?.toLocaleString() || 0}</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div className="bg-white rounded-2xl shadow-lg p-6">
+                            <div className="flex items-center space-x-3 mb-4">
+                                <div className={`w-12 h-12 bg-gradient-to-br ${balance >= 0 ? 'from-blue-500 to-cyan-500' : 'from-orange-500 to-red-500'} rounded-xl flex items-center justify-center`}>
+                                    <PieChart className="w-6 h-6 text-white" />
+                                </div>
+                                <div>
+                                    <p className="text-gray-600 text-sm">結餘</p>
+                                    <p className={`text-2xl font-bold ${balance >= 0 ? 'text-blue-700' : 'text-red-700'}`}>
+                                        NT$ {balance.toLocaleString()}
+                                    </p>
+                                </div>
+                            </div>
                         </div>
                     </div>
 
-                    {/* AI 分析 Modal */}
-                    {showAIAnalysis && (
-                        <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50" onClick={() => setShowAIAnalysis(false)}>
-                            <div className="bg-white rounded-2xl p-6 max-w-2xl w-full max-h-[80vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
-                                <div className="flex items-center justify-between mb-6">
-                                    <h2 className="text-2xl font-bold text-gray-800 flex items-center gap-2">
-                                        <Icon name="brain" size={28} className="text-purple-600" />
-                                        AI 智能分析
-                                    </h2>
-                                    <button onClick={() => setShowAIAnalysis(false)} className="p-2 hover:bg-gray-100 rounded-lg">
-                                        <Icon name="x" size={24} />
-                                    </button>
-                                </div>
-                                <div className="space-y-4">
-                                    {aiSuggestions.map((suggestion, index) => (
-                                        <div key={index} className="flex items-start gap-3 p-4 bg-gradient-to-r from-purple-50 to-pink-50 rounded-lg border border-purple-200">
-                                            <span className="text-3xl flex-shrink-0">{suggestion.icon}</span>
-                                            <p className="text-gray-800">{suggestion.text}</p>
+                    <div className="bg-white rounded-2xl shadow-lg p-6">
+                        <h3 className="text-2xl font-bold text-gray-800 mb-4">最近活動</h3>
+                        <div className="space-y-3">
+                            {data.events?.slice(-5).reverse().map((event, index) => (
+                                <div key={index} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+                                    <div className="flex items-center space-x-3">
+                                        <Calendar className="w-5 h-5 text-indigo-600" />
+                                        <div>
+                                            <p className="font-semibold text-gray-800">{event.name}</p>
+                                            <p className="text-sm text-gray-600">{event.date}</p>
                                         </div>
-                                    ))}
-                                </div>
-                            </div>
-                        </div>
-                    )}
-
-                    {/* 分享 Modal */}
-                    {showShareModal && (
-                        <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50" onClick={() => setShowShareModal(false)}>
-                            <div className="bg-white rounded-2xl p-6 max-w-md w-full" onClick={(e) => e.stopPropagation()}>
-                                <div className="flex items-center justify-between mb-6">
-                                    <h2 className="text-2xl font-bold text-gray-800 flex items-center gap-2">
-                                        <Icon name="share-2" size={28} className="text-blue-600" />
-                                        分享進度
-                                    </h2>
-                                    <button onClick={() => setShowShareModal(false)} className="p-2 hover:bg-gray-100 rounded-lg">
-                                        <Icon name="x" size={24} />
-                                    </button>
-                                </div>
-                                <div className="bg-gradient-to-r from-blue-50 to-cyan-50 p-6 rounded-lg mb-4">
-                                    <p className="text-gray-600 mb-3">分享代碼</p>
-                                    <div className="flex items-center gap-2">
-                                        <code className="flex-1 text-2xl font-bold text-indigo-600 bg-white px-4 py-3 rounded-lg">{shareCode}</code>
-                                        <button
-                                            onClick={() => {
-                                                navigator.clipboard.writeText(shareCode);
-                                                alert('已複製！');
-                                            }}
-                                            className="p-3 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700"
-                                        >
-                                            <Icon name="copy" size={20} />
-                                        </button>
                                     </div>
+                                    <span className={`px-3 py-1 rounded-full text-sm font-semibold ${
+                                        event.status === '已完成' ? 'bg-green-100 text-green-700' :
+                                        event.status === '進行中' ? 'bg-blue-100 text-blue-700' :
+                                        'bg-gray-100 text-gray-700'
+                                    }`}>
+                                        {event.status || '規劃中'}
+                                    </span>
                                 </div>
-                                <div className="text-sm text-gray-600 space-y-2">
-                                    <p>✅ 指導教授可使用此代碼查看你的進度</p>
-                                    <p>✅ 僅分享統計數據，不包含文章內容</p>
-                                    <p>✅ 代碼有效期 30 天</p>
-                                </div>
-                            </div>
+                            )) || <p className="text-gray-500 text-center py-4">暫無活動記錄</p>}
                         </div>
-                    )}
+                    </div>
                 </div>
             );
-        };
+        }
 
-        const root = ReactDOM.createRoot(document.getElementById('root'));
-        root.render(<ThesisManager />);
+        // 資料庫管理
+        function DatabaseManagement({ data, saveData }) {
+            const [members, setMembers] = useState(data.members || []);
+            const [showForm, setShowForm] = useState(false);
+            const [editingId, setEditingId] = useState(null);
+            const [formData, setFormData] = useState({
+                name: '', studentId: '', department: '', position: '',
+                phone: '', email: '', joinDate: ''
+            });
+
+            const departments = ['會長室', '副會長室', '秘書處', '財務部', '活動部', '公關部', '文宣部', '資訊部', '學權部', '其他'];
+            const positions = ['會長', '副會長', '秘書長', '部長', '副部長', '組長', '幹部', '志工'];
+
+            const handleSubmit = (e) => {
+                e.preventDefault();
+                if (editingId) {
+                    const updatedMembers = members.map(m => m.id === editingId ? { ...formData, id: editingId } : m);
+                    setMembers(updatedMembers);
+                    saveData({ ...data, members: updatedMembers });
+                } else {
+                    const newMember = { ...formData, id: Date.now().toString() };
+                    const updatedMembers = [...members, newMember];
+                    setMembers(updatedMembers);
+                    saveData({ ...data, members: updatedMembers });
+                }
+                resetForm();
+            };
+
+            const handleEdit = (member) => {
+                setFormData(member);
+                setEditingId(member.id);
+                setShowForm(true);
+            };
+
+            const handleDelete = (id) => {
+                if (confirm('確定要刪除此成員嗎？')) {
+                    const updatedMembers = members.filter(m => m.id !== id);
+                    setMembers(updatedMembers);
+                    saveData({ ...data, members: updatedMembers });
+                }
+            };
+
+            const resetForm = () => {
+                setFormData({ name: '', studentId: '', department: '', position: '', phone: '', email: '', joinDate: '' });
+                setEditingId(null);
+                setShowForm(false);
+            };
+
+            return (
+                <div className="space-y-6">
+                    <div className="flex justify-between items-center">
+                        <h2 className="text-3xl font-bold text-gray-800">成員資料庫</h2>
+                        <button
+                            onClick={() => setShowForm(!showForm)}
+                            className="flex items-center space-x-2 px-6 py-3 bg-gradient-to-r from-green-600 to-emerald-600 text-white rounded-lg hover:shadow-lg transition-all"
+                        >
+                            {showForm ? <X className="w-5 h-5" /> : <Plus className="w-5 h-5" />}
+                            <span>{showForm ? '取消' : '新增成員'}</span>
+                        </button>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                        <div className="bg-white rounded-xl shadow p-4">
+                            <p className="text-gray-600 text-sm">總成員數</p>
+                            <p className="text-3xl font-bold text-indigo-600">{members.length}</p>
+                        </div>
+                        {departments.slice(0, 3).map((dept) => (
+                            <div key={dept} className="bg-white rounded-xl shadow p-4">
+                                <p className="text-gray-600 text-sm">{dept}</p>
+                                <p className="text-3xl font-bold text-purple-600">
+                                    {members.filter(m => m.department === dept).length}
+                                </p>
+                            </div>
+                        ))}
+                    </div>
+
+                    {showForm && (
+                        <div className="bg-white rounded-xl shadow-lg p-8 border-t-4 border-green-500">
+                            <form onSubmit={handleSubmit} className="space-y-6">
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                    <div>
+                                        <label className="block text-sm font-semibold text-gray-700 mb-2">姓名</label>
+                                        <input type="text" value={formData.name} onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                                            className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-green-500 transition-all" required />
+                                    </div>
+                                    <div>
+                                        <label className="block text-sm font-semibold text-gray-700 mb-2">學號</label>
+                                        <input type="text" value={formData.studentId} onChange={(e) => setFormData({ ...formData, studentId: e.target.value })}
+                                            className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-green-500 transition-all" required />
+                                    </div>
+                                    <div>
+                                        <label className="block text-sm font-semibold text-gray-700 mb-2">部門</label>
+                                        <select value={formData.department} onChange={(e) => setFormData({ ...formData, department: e.target.value })}
+                                            className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-green-500 transition-all" required>
+                                            <option value="">請選擇</option>
+                                            {departments.map(dept => <option key={dept} value={dept}>{dept}</option>)}
+                                        </select>
+                                    </div>
+                                    <div>
+                                        <label className="block text-sm font-semibold text-gray-700 mb-2">職位</label>
+                                        <select value={formData.position} onChange={(e) => setFormData({ ...formData, position: e.target.value })}
+                                            className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-green-500 transition-all" required>
+                                            <option value="">請選擇</option>
+                                            {positions.map(pos => <option key={pos} value={pos}>{pos}</option>)}
+                                        </select>
+                                    </div>
+                                    <div>
+                                        <label className="block text-sm font-semibold text-gray-700 mb-2">電話</label>
+                                        <input type="tel" value={formData.phone} onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                                            className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-green-500 transition-all" />
+                                    </div>
+                                    <div>
+                                        <label className="block text-sm font-semibold text-gray-700 mb-2">Email</label>
+                                        <input type="email" value={formData.email} onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                                            className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-green-500 transition-all" />
+                                    </div>
+                                    <div>
+                                        <label className="block text-sm font-semibold text-gray-700 mb-2">加入日期</label>
+                                        <input type="date" value={formData.joinDate} onChange={(e) => setFormData({ ...formData, joinDate: e.target.value })}
+                                            className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-green-500 transition-all" required />
+                                    </div>
+                                </div>
+                                <div className="flex space-x-4">
+                                    <button type="submit" className="flex-1 flex items-center justify-center space-x-2 px-6 py-3 bg-gradient-to-r from-green-600 to-emerald-600 text-white rounded-lg hover:shadow-lg transition-all">
+                                        <Save className="w-5 h-5" />
+                                        <span>{editingId ? '更新成員' : '新增成員'}</span>
+                                    </button>
+                                    <button type="button" onClick={resetForm} className="px-6 py-3 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-all">取消</button>
+                                </div>
+                            </form>
+                        </div>
+                    )}
+
+                    <div className="bg-white rounded-xl shadow-lg overflow-hidden">
+                        <div className="overflow-x-auto">
+                            <table className="w-full">
+                                <thead className="bg-gradient-to-r from-green-600 to-emerald-600 text-white">
+                                    <tr>
+                                        <th className="px-6 py-4 text-left">姓名</th>
+                                        <th className="px-6 py-4 text-left">學號</th>
+                                        <th className="px-6 py-4 text-left">部門</th>
+                                        <th className="px-6 py-4 text-left">職位</th>
+                                        <th className="px-6 py-4 text-left">電話</th>
+                                        <th className="px-6 py-4 text-left">Email</th>
+                                        <th className="px-6 py-4 text-left">加入日期</th>
+                                        <th className="px-6 py-4 text-center">操作</th>
+                                    </tr>
+                                </thead>
+                                <tbody className="divide-y divide-gray-200">
+                                    {members.length === 0 ? (
+                                        <tr>
+                                            <td colSpan="8" className="px-6 py-12 text-center text-gray-500">
+                                                <Database className="w-16 h-16 text-gray-300 mx-auto mb-4" />
+                                                <p>尚無成員資料</p>
+                                            </td>
+                                        </tr>
+                                    ) : (
+                                        members.map((member) => (
+                                            <tr key={member.id} className="hover:bg-gray-50 transition-colors">
+                                                <td className="px-6 py-4 font-semibold text-gray-800">{member.name}</td>
+                                                <td className="px-6 py-4 text-gray-600">{member.studentId}</td>
+                                                <td className="px-6 py-4">
+                                                    <span className="px-3 py-1 bg-purple-100 text-purple-700 rounded-full text-sm font-semibold">{member.department}</span>
+                                                </td>
+                                                <td className="px-6 py-4">
+                                                    <span className="px-3 py-1 bg-blue-100 text-blue-700 rounded-full text-sm font-semibold">{member.position}</span>
+                                                </td>
+                                                <td className="px-6 py-4 text-gray-600">{member.phone || '-'}</td>
+                                                <td className="px-6 py-4 text-gray-600">{member.email || '-'}</td>
+                                                <td className="px-6 py-4 text-gray-600">{member.joinDate}</td>
+                                                <td className="px-6 py-4">
+                                                    <div className="flex justify-center space-x-2">
+                                                        <button onClick={() => handleEdit(member)} className="p-2 bg-blue-100 text-blue-600 rounded-lg hover:bg-blue-200 transition-all">
+                                                            <Edit2 className="w-4 h-4" />
+                                                        </button>
+                                                        <button onClick={() => handleDelete(member.id)} className="p-2 bg-red-100 text-red-600 rounded-lg hover:bg-red-200 transition-all">
+                                                            <Trash2 className="w-4 h-4" />
+                                                        </button>
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                        ))
+                                    )}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            );
+        }
+
+        // 儀表板
+        function Dashboard({ data, setCurrentPage }) {
+            const menuItems = [
+                { id: 'meeting-attendance', title: '開會點名紀錄', description: '記錄會議出席狀況', icon: Users, color: 'from-blue-500 to-cyan-500', count: data.meetings?.length || 0 },
+                { id: 'event-booth', title: '活動顧攤紀錄', description: '記錄顧攤人員報到', icon: CheckCircle, color: 'from-green-500 to-emerald-500', count: data.attendance?.filter(a => a.type === 'booth').length || 0 },
+                { id: 'event-attendance', title: '活動出席紀錄', description: '記錄活動參與人員', icon: Users, color: 'from-purple-500 to-pink-500', count: data.attendance?.filter(a => a.type === 'event').length || 0 },
+                { id: 'event-management', title: '活動紀錄表', description: '從企劃到檢討完整流程', icon: FileText, color: 'from-orange-500 to-red-500', count: data.events?.length || 0 },
+                { id: 'admin-process', title: '會內行政流程', description: '提案審核流程管理', icon: TrendingUp, color: 'from-indigo-500 to-purple-500', count: data.proposals?.length || 0 },
+                { id: 'calendar', title: '會內行事曆', description: '統整所有行程', icon: Calendar, color: 'from-teal-500 to-green-500', count: data.calendar?.length || 0 },
+                { id: 'trip-record', title: '出差紀錄表', description: '記錄外出公務', icon: FileText, color: 'from-yellow-500 to-orange-500', count: data.tripRecords?.length || 0 },
+                { id: 'work-record', title: '工作紀錄表', description: '各部會工作記錄', icon: Clock, color: 'from-pink-500 to-rose-500', count: data.workRecords?.length || 0 },
+                { id: 'announcements', title: '公告紀錄表', description: '經費、規章、聲明', icon: AlertCircle, color: 'from-red-500 to-pink-500', count: data.announcements?.length || 0 }
+            ];
+
+            return (
+                <div className="space-y-8">
+                    <div className="text-center space-y-4">
+                        <h2 className="text-4xl font-bold text-gray-800">歡迎使用學生會管理系統</h2>
+                        <p className="text-xl text-gray-600">選擇功能開始管理您的學生會工作</p>
+                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                        {menuItems.map((item) => {
+                            const Icon = item.icon;
+                            return (
+                                <button key={item.id} onClick={() => setCurrentPage(item.id)}
+                                    className="group relative bg-white rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-300 overflow-hidden transform hover:-translate-y-2">
+                                    <div className={`absolute inset-0 bg-gradient-to-br ${item.color} opacity-0 group-hover:opacity-10 transition-opacity`} />
+                                    <div className="p-6 space-y-4">
+                                        <div className="flex items-start justify-between">
+                                            <div className={`w-14 h-14 bg-gradient-to-br ${item.color} rounded-xl flex items-center justify-center shadow-lg`}>
+                                                <Icon className="w-7 h-7 text-white" />
+                                            </div>
+                                            <div className="flex items-center space-x-2">
+                                                <span className="text-2xl font-bold text-gray-800">{item.count}</span>
+                                                <span className="text-sm text-gray-500">筆</span>
+                                            </div>
+                                        </div>
+                                        <div className="text-left">
+                                            <h3 className="text-xl font-bold text-gray-800 mb-2">{item.title}</h3>
+                                            <p className="text-gray-600 text-sm">{item.description}</p>
+                                        </div>
+                                        <div className="flex items-center text-indigo-600 font-semibold group-hover:translate-x-2 transition-transform">
+                                            <span>開始使用</span>
+                                            <ChevronRight className="w-5 h-5 ml-1" />
+                                        </div>
+                                    </div>
+                                </button>
+                            );
+                        })}
+                    </div>
+                </div>
+            );
+        }
+
+        // 活動管理
+        function EventManagement({ data, saveData }) {
+            const [events, setEvents] = useState(data.events || []);
+            const [showForm, setShowForm] = useState(false);
+            const [viewingEvent, setViewingEvent] = useState(null);
+            const [formData, setFormData] = useState({
+                name: '', date: '', type: '學生會組', status: '籌備中',
+                description: '', budget: '', venue: '', department: '', notes: ''
+            });
+
+            const handleSubmit = (e) => {
+                e.preventDefault();
+                const newEvent = {
+                    ...formData,
+                    id: Date.now().toString(),
+                    caseNumber: `CASE-${new Date().getFullYear()}${String(new Date().getMonth() + 1).padStart(2, '0')}${String(new Date().getDate()).padStart(2, '0')}-${Date.now().toString().slice(-6)}`,
+                    createdAt: new Date().toISOString(),
+                    tasks: [],
+                    records: []
+                };
+                const updatedEvents = [...events, newEvent];
+                setEvents(updatedEvents);
+                saveData({ ...data, events: updatedEvents });
+                setShowForm(false);
+                setFormData({ name: '', date: '', type: '學生會組', status: '籌備中', description: '', budget: '', venue: '', department: '', notes: '' });
+            };
+
+            const handleDelete = (id) => {
+                if (confirm('確定要刪除此活動嗎？')) {
+                    const updatedEvents = events.filter(e => e.id !== id);
+                    setEvents(updatedEvents);
+                    saveData({ ...data, events: updatedEvents });
+                    setViewingEvent(null);
+                }
+            };
+
+            if (viewingEvent) {
+                return <EventDetailView event={viewingEvent} data={data} saveData={saveData} onBack={() => setViewingEvent(null)} onDelete={handleDelete} />;
+            }
+
+            return (
+                <div className="space-y-6">
+                    <div className="flex justify-between items-center">
+                        <h2 className="text-3xl font-bold text-gray-800">活動紀錄表</h2>
+                        <button onClick={() => setShowForm(!showForm)}
+                            className="flex items-center space-x-2 px-6 py-3 bg-gradient-to-r from-orange-600 to-red-600 text-white rounded-lg hover:shadow-lg transition-all">
+                            {showForm ? <X className="w-5 h-5" /> : <Plus className="w-5 h-5" />}
+                            <span>{showForm ? '取消' : '新增活動'}</span>
+                        </button>
+                    </div>
+
+                    {showForm && (
+                        <div className="bg-white rounded-xl shadow-lg p-8 border-t-4 border-orange-500">
+                            <form onSubmit={handleSubmit} className="space-y-6">
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                    <div>
+                                        <label className="block text-sm font-semibold text-gray-700 mb-2">活動名稱</label>
+                                        <input type="text" value={formData.name} onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                                            className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-orange-500 transition-all" required />
+                                    </div>
+                                    <div>
+                                        <label className="block text-sm font-semibold text-gray-700 mb-2">活動日期</label>
+                                        <input type="date" value={formData.date} onChange={(e) => setFormData({ ...formData, date: e.target.value })}
+                                            className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-orange-500 transition-all" required />
+                                    </div>
+                                    <div>
+                                        <label className="block text-sm font-semibold text-gray-700 mb-2">活動類型</label>
+                                        <select value={formData.type} onChange={(e) => setFormData({ ...formData, type: e.target.value })}
+                                            className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-orange-500 transition-all">
+                                            <option>學生會組</option>
+                                            <option>系學會組</option>
+                                            <option>社團組</option>
+                                        </select>
+                                    </div>
+                                    <div>
+                                        <label className="block text-sm font-semibold text-gray-700 mb-2">狀態</label>
+                                        <select value={formData.status} onChange={(e) => setFormData({ ...formData, status: e.target.value })}
+                                            className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-orange-500 transition-all">
+                                            <option>籌備中</option>
+                                            <option>進行中</option>
+                                            <option>已完成</option>
+                                            <option>已取消</option>
+                                        </select>
+                                    </div>
+                                    <div>
+                                        <label className="block text-sm font-semibold text-gray-700 mb-2">負責部門</label>
+                                        <input type="text" value={formData.department} onChange={(e) => setFormData({ ...formData, department: e.target.value })}
+                                            className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-orange-500 transition-all" />
+                                    </div>
+                                    <div>
+                                        <label className="block text-sm font-semibold text-gray-700 mb-2">活動地點</label>
+                                        <input type="text" value={formData.venue} onChange={(e) => setFormData({ ...formData, venue: e.target.value })}
+                                            className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-orange-500 transition-all" />
+                                    </div>
+                                    <div>
+                                        <label className="block text-sm font-semibold text-gray-700 mb-2">預算金額</label>
+                                        <input type="number" value={formData.budget} onChange={(e) => setFormData({ ...formData, budget: e.target.value })}
+                                            className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-orange-500 transition-all" placeholder="元" />
+                                    </div>
+                                </div>
+                                <div>
+                                    <label className="block text-sm font-semibold text-gray-700 mb-2">活動描述</label>
+                                    <textarea value={formData.description} onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                                        className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-orange-500 transition-all" rows="4" />
+                                </div>
+                                <button type="submit" className="w-full flex items-center justify-center space-x-2 px-6 py-3 bg-gradient-to-r from-orange-600 to-red-600 text-white rounded-lg hover:shadow-lg transition-all">
+                                    <Save className="w-5 h-5" />
+                                    <span>建立活動</span>
+                                </button>
+                            </form>
+                        </div>
+                    )}
+
+                    <div className="grid gap-4">
+                        {events.length === 0 ? (
+                            <div className="text-center py-12 bg-white rounded-xl shadow">
+                                <FileText className="w-16 h-16 text-gray-300 mx-auto mb-4" />
+                                <p className="text-gray-500">尚無活動記錄</p>
+                            </div>
+                        ) : (
+                            events.map((event) => (
+                                <div key={event.id} onClick={() => setViewingEvent(event)}
+                                    className="bg-white rounded-xl shadow-lg p-6 hover:shadow-xl transition-all cursor-pointer border-l-4 border-orange-500">
+                                    <div className="flex justify-between items-start">
+                                        <div className="flex-1">
+                                            <h3 className="text-xl font-bold text-gray-800 mb-2">{event.name}</h3>
+                                            <div className="flex flex-wrap gap-2 mb-3">
+                                                <span className="px-3 py-1 bg-blue-100 text-blue-700 rounded-full text-sm font-semibold">{event.type}</span>
+                                                <span className={`px-3 py-1 rounded-full text-sm font-semibold ${
+                                                    event.status === '已完成' ? 'bg-green-100 text-green-700' :
+                                                    event.status === '進行中' ? 'bg-blue-100 text-blue-700' :
+                                                    event.status === '已取消' ? 'bg-red-100 text-red-700' : 'bg-gray-100 text-gray-700'
+                                                }`}>{event.status}</span>
+                                            </div>
+                                            <p className="text-gray-600 text-sm">📅 {event.date}</p>
+                                            {event.venue && <p className="text-gray-600 text-sm">📍 {event.venue}</p>}
+                                        </div>
+                                        <ChevronRight className="w-6 h-6 text-gray-400" />
+                                    </div>
+                                </div>
+                            ))
+                        )}
+                    </div>
+                </div>
+            );
+        }
+
+        // 活動詳細檢視
+        function EventDetailView({ event, data, saveData, onBack, onDelete }) {
+            const [tasks, setTasks] = useState(event.tasks || []);
+            const [records, setRecords] = useState(event.records || []);
+            const [showTaskForm, setShowTaskForm] = useState(false);
+            const [showRecordForm, setShowRecordForm] = useState(false);
+            const [taskInput, setTaskInput] = useState('');
+            const [recordInput, setRecordInput] = useState('');
+
+            useEffect(() => {
+                const updatedEvents = data.events.map(e => 
+                    e.id === event.id ? { ...e, tasks, records } : e
+                );
+                saveData({ ...data, events: updatedEvents });
+            }, [tasks, records]);
+
+            const addTask = () => {
+                if (taskInput.trim()) {
+                    setTasks([...tasks, { id: Date.now().toString(), content: taskInput, completed: false, createdAt: new Date().toISOString() }]);
+                    setTaskInput('');
+                    setShowTaskForm(false);
+                }
+            };
+
+            const toggleTask = (taskId) => {
+                setTasks(tasks.map(t => t.id === taskId ? { ...t, completed: !t.completed } : t));
+            };
+
+            const addRecord = () => {
+                if (recordInput.trim()) {
+                    setRecords([...records, { id: Date.now().toString(), content: recordInput, createdAt: new Date().toISOString() }]);
+                    setRecordInput('');
+                    setShowRecordForm(false);
+                }
+            };
+
+            const completedTasks = tasks.filter(t => t.completed).length;
+
+            return (
+                <div className="space-y-6">
+                    <button onClick={onBack} className="flex items-center space-x-2 text-gray-600 hover:text-gray-800 transition-all">
+                        <ChevronRight className="w-5 h-5 transform rotate-180" />
+                        <span>返回列表</span>
+                    </button>
+
+                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                        <div className="lg:col-span-2 space-y-6">
+                            <div className="bg-gradient-to-br from-orange-50 to-red-50 rounded-2xl p-8">
+                                <div className="flex justify-between items-start mb-4">
+                                    <h2 className="text-3xl font-bold text-gray-800">{event.name}</h2>
+                                    <button onClick={() => onDelete(event.id)}
+                                        className="px-4 py-2 bg-red-100 text-red-700 rounded-lg hover:bg-red-200 transition-all font-medium">
+                                        刪除活動
+                                    </button>
+                                </div>
+                                <div className="flex flex-wrap gap-2">
+                                    <span className="px-3 py-1 bg-blue-100 text-blue-700 rounded-full text-sm font-semibold">{event.type}</span>
+                                    <span className="px-3 py-1 bg-purple-100 text-purple-700 rounded-full text-sm font-semibold">{event.status}</span>
+                                </div>
+                            </div>
+
+                            <div className="bg-white rounded-xl shadow-lg p-6">
+                                <h3 className="text-xl font-bold text-gray-800 mb-4">案件描述</h3>
+                                <div className="text-gray-700 whitespace-pre-wrap">{event.description || '尚無描述'}</div>
+                            </div>
+
+                            <div className="bg-white rounded-xl shadow-lg p-6">
+                                <div className="flex justify-between items-center mb-4">
+                                    <h3 className="text-xl font-bold text-gray-800">待辦清單 ({completedTasks}/{tasks.length})</h3>
+                                    <button onClick={() => setShowTaskForm(!showTaskForm)}
+                                        className="px-4 py-2 bg-orange-100 text-orange-700 rounded-lg hover:bg-orange-200 transition-all font-medium">
+                                        {showTaskForm ? '取消' : '新增任務'}
+                                    </button>
+                                </div>
+                                {showTaskForm && (
+                                    <div className="mb-4 flex space-x-2">
+                                        <input type="text" value={taskInput} onChange={(e) => setTaskInput(e.target.value)} placeholder="輸入待辦事項..."
+                                            className="flex-1 px-4 py-2 border-2 border-gray-200 rounded-lg focus:border-orange-500 transition-all"
+                                            onKeyPress={(e) => e.key === 'Enter' && addTask()} />
+                                        <button onClick={addTask} className="px-6 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 transition-all">新增</button>
+                                    </div>
+                                )}
+                                <div className="space-y-2">
+                                    {tasks.length === 0 ? (
+                                        <p className="text-gray-500 text-center py-4">尚無待辦任務</p>
+                                    ) : (
+                                        tasks.map((task) => (
+                                            <div key={task.id} onClick={() => toggleTask(task.id)}
+                                                className="flex items-center space-x-3 p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-all cursor-pointer">
+                                                <div className={`w-5 h-5 rounded border-2 flex items-center justify-center ${
+                                                    task.completed ? 'bg-green-500 border-green-500' : 'border-gray-300'
+                                                }`}>
+                                                    {task.completed && <CheckCircle className="w-4 h-4 text-white" />}
+                                                </div>
+                                                <span className={`flex-1 ${task.completed ? 'line-through text-gray-400' : 'text-gray-700'}`}>{task.content}</span>
+                                            </div>
+                                        ))
+                                    )}
+                                </div>
+                            </div>
+
+                            <div className="bg-white rounded-xl shadow-lg p-6">
+                                <div className="flex justify-between items-center mb-4">
+                                    <h3 className="text-xl font-bold text-gray-800">溝通記錄 ({records.length})</h3>
+                                    <button onClick={() => setShowRecordForm(!showRecordForm)}
+                                        className="px-4 py-2 bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200 transition-all font-medium">
+                                        {showRecordForm ? '取消' : '新增記錄'}
+                                    </button>
+                                </div>
+                                {showRecordForm && (
+                                    <div className="mb-4">
+                                        <textarea value={recordInput} onChange={(e) => setRecordInput(e.target.value)} placeholder="輸入溝通記錄..."
+                                            className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-blue-500 transition-all" rows="3" />
+                                        <button onClick={addRecord} className="mt-2 px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-all">新增記錄</button>
+                                    </div>
+                                )}
+                                <div className="space-y-3">
+                                    {records.length === 0 ? (
+                                        <p className="text-gray-500 text-center py-4">尚無溝通記錄</p>
+                                    ) : (
+                                        records.map((record) => (
+                                            <div key={record.id} className="p-4 bg-gray-50 rounded-lg">
+                                                <p className="text-gray-700 mb-2">{record.content}</p>
+                                                <p className="text-xs text-gray-500">{new Date(record.createdAt).toLocaleString('zh-TW')}</p>
+                                            </div>
+                                        ))
+                                    )}
+                                </div>
+                            </div>
+                        </div>
+
+                        <div className="space-y-6">
+                            <div className="bg-white rounded-xl shadow-lg p-6">
+                                <h3 className="text-xl font-bold text-gray-800 mb-4">基本資訊</h3>
+                                <div className="space-y-4">
+                                    <div>
+                                        <p className="text-sm text-gray-500 mb-1">案件編號</p>
+                                        <p className="text-gray-800 font-semibold">{event.caseNumber}</p>
+                                    </div>
+                                    <div>
+                                        <p className="text-sm text-gray-500 mb-1">狀態</p>
+                                        <span className={`inline-block px-3 py-1 rounded-full text-sm font-semibold ${
+                                            event.status === '已完成' ? 'bg-green-100 text-green-700' :
+                                            event.status === '進行中' ? 'bg-blue-100 text-blue-700' :
+                                            event.status === '已取消' ? 'bg-red-100 text-red-700' : 'bg-gray-100 text-gray-700'
+                                        }`}>{event.status}</span>
+                                    </div>
+                                    <div>
+                                        <p className="text-sm text-gray-500 mb-1">活動類型</p>
+                                        <p className="text-gray-800 font-semibold">{event.type}</p>
+                                    </div>
+                                    <div>
+                                        <p className="text-sm text-gray-500 mb-1">活動日期</p>
+                                        <p className="text-gray-800 font-semibold">{event.date}</p>
+                                    </div>
+                                    {event.venue && (
+                                        <div>
+                                            <p className="text-sm text-gray-500 mb-1">活動地點</p>
+                                            <p className="text-gray-800 font-semibold">{event.venue}</p>
+                                        </div>
+                                    )}
+                                    {event.department && (
+                                        <div>
+                                            <p className="text-sm text-gray-500 mb-1">負責部門</p>
+                                            <p className="text-gray-800 font-semibold">{event.department}</p>
+                                        </div>
+                                    )}
+                                    {event.budget && (
+                                        <div>
+                                            <p className="text-sm text-gray-500 mb-1">預算金額</p>
+                                            <p className="text-gray-800 font-semibold">NT$ {parseInt(event.budget).toLocaleString()}</p>
+                                        </div>
+                                    )}
+                                    <div>
+                                        <p className="text-sm text-gray-500 mb-1">建立時間</p>
+                                        <p className="text-gray-800 font-semibold">{new Date(event.createdAt).toLocaleString('zh-TW')}</p>
+                                    </div>
+                                    <div>
+                                        <p className="text-sm text-gray-500 mb-1">更新時間</p>
+                                        <p className="text-gray-800 font-semibold">{Math.floor((new Date() - new Date(event.createdAt)) / (1000 * 60 * 60))} 小時前</p>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div className="bg-white rounded-xl shadow-lg p-6">
+                                <div className="flex justify-between items-center mb-4">
+                                    <h3 className="text-xl font-bold text-gray-800">附件 (0)</h3>
+                                    <button className="px-4 py-2 bg-indigo-100 text-indigo-700 rounded-lg hover:bg-indigo-200 transition-all font-medium">上傳</button>
+                                </div>
+                                <p className="text-gray-500 text-center py-4 text-sm">尚無附件</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            );
+        }
+
+        // 其他簡化組件
+        function MeetingAttendance({ data, saveData }) {
+            return <div className="bg-white rounded-xl shadow-lg p-8"><h2 className="text-3xl font-bold text-gray-800 mb-4">開會點名紀錄</h2><p className="text-gray-600">此功能開發中...</p></div>;
+        }
+        function EventBooth({ data, saveData }) {
+            return <div className="bg-white rounded-xl shadow-lg p-8"><h2 className="text-3xl font-bold text-gray-800 mb-4">活動顧攤紀錄</h2><p className="text-gray-600">此功能開發中...</p></div>;
+        }
+        function EventAttendance({ data, saveData }) {
+            return <div className="bg-white rounded-xl shadow-lg p-8"><h2 className="text-3xl font-bold text-gray-800 mb-4">活動出席紀錄</h2><p className="text-gray-600">此功能開發中...</p></div>;
+        }
+        function AdminProcess({ data, saveData }) {
+            return <div className="bg-white rounded-xl shadow-lg p-8"><h2 className="text-3xl font-bold text-gray-800 mb-4">會內行政流程</h2><p className="text-gray-600">此功能開發中...</p></div>;
+        }
+        function CalendarView({ data, saveData }) {
+            return <div className="bg-white rounded-xl shadow-lg p-8"><h2 className="text-3xl font-bold text-gray-800 mb-4">會內行事曆</h2><p className="text-gray-600">此功能開發中...</p></div>;
+        }
+        function TripRecord({ data, saveData }) {
+            return <div className="bg-white rounded-xl shadow-lg p-8"><h2 className="text-3xl font-bold text-gray-800 mb-4">出差紀錄表</h2><p className="text-gray-600">此功能開發中...</p></div>;
+        }
+        function WorkRecord({ data, saveData }) {
+            return <div className="bg-white rounded-xl shadow-lg p-8"><h2 className="text-3xl font-bold text-gray-800 mb-4">工作紀錄表</h2><p className="text-gray-600">此功能開發中...</p></div>;
+        }
+        function Announcements({ data, saveData }) {
+            return <div className="bg-white rounded-xl shadow-lg p-8"><h2 className="text-3xl font-bold text-gray-800 mb-4">公告紀錄表</h2><p className="text-gray-600">此功能開發中...</p></div>;
+        }
+
+        // 渲染應用
+        ReactDOM.render(<StudentUnionSystem />, document.getElementById('root'));
+        
+        // 初始化 Lucide 圖標
+        lucide.createIcons();
     </script>
 </body>
 </html>
