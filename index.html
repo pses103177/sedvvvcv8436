@@ -1,349 +1,503 @@
 <!DOCTYPE html>
 <html lang="zh-TW">
-
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>學生會工作管理系統</title>
-    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
-    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
-    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
-    <script src="https://unpkg.com/lucide@latest"></script>
-    <script src="https://cdn.tailwindcss.com"></script>
+    <title>思維空間 - 思考、激盪、正念</title>
     <style>
-        body {
-            margin: 0;
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
-                'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
-                sans-serif;
-            -webkit-font-smoothing: antialiased;
-            -moz-osx-font-smoothing: grayscale;
+        :root {
+            --bg-primary: #f5f1e8;
+            --bg-secondary: #e8e3d6;
+            --bg-card: #ffffff;
+            --text-primary: #2c3e3a;
+            --text-secondary: #5a6f68;
+            --accent-warm: #d4845f;
+            --accent-cool: #7ca591;
+            --accent-deep: #3d5a52;
         }
 
-        code {
-            font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New', monospace;
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Microsoft JhengHei", sans-serif;
+            background: linear-gradient(135deg, var(--bg-primary) 0%, var(--bg-secondary) 100%);
+            color: var(--text-primary);
+            line-height: 1.6;
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+
+        header {
+            text-align: center;
+            padding: 3rem 0;
+        }
+
+        h1 {
+            font-size: 3rem;
+            font-weight: 600;
+            color: var(--accent-deep);
+            margin-bottom: 1rem;
+        }
+
+        .subtitle {
+            font-size: 1.1rem;
+            color: var(--text-secondary);
+        }
+
+        .nav-tabs {
+            display: flex;
+            justify-content: center;
+            gap: 1rem;
+            margin: 2rem 0;
+            flex-wrap: wrap;
+        }
+
+        .tab-btn {
+            padding: 0.8rem 2rem;
+            background: var(--bg-card);
+            border: 2px solid transparent;
+            border-radius: 50px;
+            font-size: 1rem;
+            color: var(--text-secondary);
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+
+        .tab-btn:hover {
+            border-color: var(--accent-cool);
+            transform: translateY(-2px);
+        }
+
+        .tab-btn.active {
+            background: var(--accent-cool);
+            color: white;
+        }
+
+        .content-section {
+            display: none;
+        }
+
+        .content-section.active {
+            display: block;
+        }
+
+        .card {
+            background: var(--bg-card);
+            border-radius: 20px;
+            padding: 2.5rem;
+            margin: 2rem 0;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+        }
+
+        h2 {
+            font-size: 2rem;
+            color: var(--accent-deep);
+            margin-bottom: 1.5rem;
+        }
+
+        .question-box {
+            background: #f9f7f3;
+            border-left: 4px solid var(--accent-warm);
+            padding: 1.5rem;
+            margin: 1rem 0;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .question-box:hover {
+            transform: translateX(10px);
+        }
+
+        .question {
+            font-weight: 500;
+            font-size: 1.1rem;
+        }
+
+        .answer-area {
+            margin-top: 1rem;
+            display: none;
+        }
+
+        .answer-area.show {
+            display: block;
+        }
+
+        textarea {
+            width: 100%;
+            min-height: 100px;
+            padding: 1rem;
+            border: 2px solid var(--bg-secondary);
+            border-radius: 10px;
+            font-size: 1rem;
+            resize: vertical;
+            font-family: inherit;
+        }
+
+        textarea:focus {
+            outline: none;
+            border-color: var(--accent-cool);
+        }
+
+        .idea-input {
+            display: flex;
+            gap: 1rem;
+            margin-bottom: 2rem;
+        }
+
+        input[type="text"] {
+            flex: 1;
+            padding: 1rem;
+            border: 2px solid var(--bg-secondary);
+            border-radius: 10px;
+            font-size: 1rem;
+            font-family: inherit;
+        }
+
+        input[type="text"]:focus {
+            outline: none;
+            border-color: var(--accent-warm);
+        }
+
+        button {
+            padding: 1rem 2rem;
+            background: var(--accent-warm);
+            color: white;
+            border: none;
+            border-radius: 10px;
+            font-size: 1rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        button:hover {
+            background: var(--accent-deep);
+            transform: scale(1.05);
+        }
+
+        .ideas-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+            gap: 1rem;
+        }
+
+        .idea-card {
+            background: linear-gradient(135deg, var(--accent-cool), var(--accent-deep));
+            color: white;
+            padding: 1.5rem;
+            border-radius: 15px;
+            position: relative;
+        }
+
+        .idea-card::before {
+            content: '💡';
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            font-size: 1.5rem;
+            opacity: 0.3;
+        }
+
+        .idea-text {
+            font-size: 1rem;
+            line-height: 1.5;
+            word-wrap: break-word;
+        }
+
+        .delete-idea {
+            margin-top: 1rem;
+            padding: 0.5rem 1rem;
+            background: rgba(255,255,255,0.2);
+            font-size: 0.85rem;
+        }
+
+        .timer-container {
+            text-align: center;
+            padding: 2rem;
+        }
+
+        .timer-display {
+            font-size: 4rem;
+            color: var(--accent-deep);
+            margin: 2rem 0;
+            font-weight: 600;
+        }
+
+        .timer-controls {
+            display: flex;
+            justify-content: center;
+            gap: 1rem;
+            flex-wrap: wrap;
+            margin: 2rem 0;
+        }
+
+        .preset-btn {
+            padding: 1rem 1.5rem;
+            background: var(--bg-secondary);
+            color: var(--text-primary);
+            border: 2px solid var(--accent-cool);
+        }
+
+        .preset-btn:hover {
+            background: var(--accent-cool);
+            color: white;
+        }
+
+        .breathing-guide {
+            font-size: 1.5rem;
+            color: var(--accent-warm);
+            margin: 2rem 0;
+            min-height: 2rem;
+        }
+
+        @media (max-width: 768px) {
+            h1 { font-size: 2rem; }
+            .timer-display { font-size: 3rem; }
+            .card { padding: 1.5rem; }
+            .idea-input { flex-direction: column; }
+            .ideas-grid { grid-template-columns: 1fr; }
         }
     </style>
 </head>
-
 <body>
-    <div id="root"></div>
+    <div class="container">
+        <header>
+            <h1>🌿 思維空間</h1>
+            <p class="subtitle">探索思考 · 激發創意 · 靜心呼吸</p>
+        </header>
 
-    <script type="text/babel">
-        const { useState, useEffect } = React;
-        const {
-            Calendar, Users, FileText, AlertCircle, CheckCircle, Clock, TrendingUp,
-            Plus, Edit2, Trash2, Save, X, ChevronRight, Download, Upload, BarChart3,
-            PieChart, Activity, Database, MapPin, DollarSign, Bell, BookOpen
-        } = lucide;
+        <div class="nav-tabs">
+            <button class="tab-btn active" onclick="switchTab('thinking')">💭 深度思考</button>
+            <button class="tab-btn" onclick="switchTab('brainstorm')">🧠 腦力激盪</button>
+            <button class="tab-btn" onclick="switchTab('mindful')">🧘 正念練習</button>
+        </div>
 
-        // 簡單的本地存儲實現
-        const storage = {
-            get: (key) => {
-                const value = localStorage.getItem(key);
-                return value ? { value } : null;
-            },
-            set: (key, value) => {
-                localStorage.setItem(key, value);
+        <!-- 深度思考區 -->
+        <div id="thinking" class="content-section active">
+            <div class="card">
+                <h2>🌱 引導式思考練習</h2>
+                <p style="color: var(--text-secondary); margin-bottom: 2rem;">
+                    點擊問題開始思考，寫下您的想法
+                </p>
+
+                <div class="question-box" onclick="toggleAnswer(1)">
+                    <div class="question">1. 今天什麼時刻讓你感到最有活力？</div>
+                    <div class="answer-area" id="answer1">
+                        <textarea placeholder="在這裡記錄您的思考..."></textarea>
+                    </div>
+                </div>
+
+                <div class="question-box" onclick="toggleAnswer(2)">
+                    <div class="question">2. 如果時間和金錢不是問題，你會做什麼？</div>
+                    <div class="answer-area" id="answer2">
+                        <textarea placeholder="在這裡記錄您的思考..."></textarea>
+                    </div>
+                </div>
+
+                <div class="question-box" onclick="toggleAnswer(3)">
+                    <div class="question">3. 最近有什麼事情讓你感到困擾？為什麼？</div>
+                    <div class="answer-area" id="answer3">
+                        <textarea placeholder="在這裡記錄您的思考..."></textarea>
+                    </div>
+                </div>
+
+                <div class="question-box" onclick="toggleAnswer(4)">
+                    <div class="question">4. 你最珍視的三個價值觀是什麼？</div>
+                    <div class="answer-area" id="answer4">
+                        <textarea placeholder="在這裡記錄您的思考..."></textarea>
+                    </div>
+                </div>
+
+                <div class="question-box" onclick="toggleAnswer(5)">
+                    <div class="question">5. 一年後的你，希望在哪些方面有所成長？</div>
+                    <div class="answer-area" id="answer5">
+                        <textarea placeholder="在這裡記錄您的思考..."></textarea>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 腦力激盪區 -->
+        <div id="brainstorm" class="content-section">
+            <div class="card">
+                <h2>💡 想法捕捉器</h2>
+                <p style="color: var(--text-secondary); margin-bottom: 2rem;">
+                    快速記錄閃現的靈感和想法，不要評判，只管寫下來！
+                </p>
+
+                <div class="idea-input">
+                    <input type="text" id="ideaInput" placeholder="輸入您的想法或靈感..." onkeypress="handleEnter(event)">
+                    <button onclick="addIdea()">💫 新增想法</button>
+                </div>
+
+                <div id="ideasGrid" class="ideas-grid"></div>
+            </div>
+        </div>
+
+        <!-- 正念練習區 -->
+        <div id="mindful" class="content-section">
+            <div class="card">
+                <h2>🌸 正念呼吸計時器</h2>
+                <p style="color: var(--text-secondary); margin-bottom: 1rem; text-align: center;">
+                    選擇時間開始練習，跟隨呼吸引導放鬆身心
+                </p>
+
+                <div class="timer-container">
+                    <div class="timer-display" id="timerDisplay">05:00</div>
+                    <div class="breathing-guide" id="breathingGuide"></div>
+                    
+                    <div class="timer-controls">
+                        <button class="preset-btn" onclick="setTimer(300)">5 分鐘</button>
+                        <button class="preset-btn" onclick="setTimer(600)">10 分鐘</button>
+                        <button class="preset-btn" onclick="setTimer(900)">15 分鐘</button>
+                    </div>
+
+                    <div class="timer-controls">
+                        <button onclick="startTimer()">▶️ 開始</button>
+                        <button onclick="pauseTimer()" style="background: var(--accent-cool);">⏸️ 暫停</button>
+                        <button onclick="resetTimer()" style="background: var(--text-secondary);">🔄 重置</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 選項卡切換
+        function switchTab(tabName) {
+            document.querySelectorAll('.content-section').forEach(s => s.classList.remove('active'));
+            document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+            document.getElementById(tabName).classList.add('active');
+            event.target.classList.add('active');
+        }
+
+        // 思考問題展開收起
+        function toggleAnswer(id) {
+            document.getElementById('answer' + id).classList.toggle('show');
+        }
+
+        // 腦力激盪功能
+        let ideas = [];
+
+        function addIdea() {
+            const input = document.getElementById('ideaInput');
+            const text = input.value.trim();
+            if (!text) {
+                alert('請輸入您的想法！');
+                return;
             }
-        };
+            ideas.push(text);
+            input.value = '';
+            renderIdeas();
+        }
 
-        // 將 storage 掛載到 window 對象
-        window.storage = storage;
+        function deleteIdea(index) {
+            ideas.splice(index, 1);
+            renderIdeas();
+        }
 
-        // 學生會工作管理系統
-        function StudentUnionSystem() {
-            const [currentPage, setCurrentPage] = useState('dashboard');
-            const [data, setData] = useState({
-                meetings: [],
-                events: [],
-                attendance: [],
-                proposals: [],
-                calendar: [],
-                workRecords: [],
-                announcements: [],
-                tripRecords: [],
-                members: []
-            });
-
-            // 載入數據
-            useEffect(() => {
-                loadData();
-            }, []);
-
-            const loadData = async () => {
-                try {
-                    const result = await window.storage.get('student-union-data');
-                    if (result) {
-                        setData(JSON.parse(result.value));
-                    }
-                } catch (error) {
-                    console.log('初次使用，創建新數據');
-                }
-            };
-
-            const saveData = async (newData) => {
-                setData(newData);
-                try {
-                    await window.storage.set('student-union-data', JSON.stringify(newData));
-                } catch (error) {
-                    console.error('保存數據失敗:', error);
-                }
-            };
-
-            // 匯出資料
-            const exportData = () => {
-                const dataStr = JSON.stringify(data, null, 2);
-                const dataBlob = new Blob([dataStr], { type: 'application/json' });
-                const url = URL.createObjectURL(dataBlob);
-                const link = document.createElement('a');
-                link.href = url;
-                link.download = `學生會資料_${new Date().toISOString().split('T')[0]}.json`;
-                link.click();
-            };
-
-            // 匯入資料
-            const importData = (event) => {
-                const file = event.target.files[0];
-                if (file) {
-                    const reader = new FileReader();
-                    reader.onload = (e) => {
-                        try {
-                            const importedData = JSON.parse(e.target.result);
-                            saveData(importedData);
-                            alert('資料匯入成功！');
-                        } catch (error) {
-                            alert('資料格式錯誤，匯入失敗！');
-                        }
-                    };
-                    reader.readAsText(file);
-                }
-            };
-
-            const renderPage = () => {
-                switch (currentPage) {
-                    case 'dashboard':
-                        return <Dashboard data={data} setCurrentPage={setCurrentPage} />;
-                    case 'statistics':
-                        return <Statistics data={data} />;
-                    case 'database':
-                        return <DatabaseManagement data={data} saveData={saveData} />;
-                    case 'meeting-attendance':
-                        return <MeetingAttendance data={data} saveData={saveData} />;
-                    case 'event-booth':
-                        return <EventBooth data={data} saveData={saveData} />;
-                    case 'event-attendance':
-                        return <EventAttendance data={data} saveData={saveData} />;
-                    case 'event-management':
-                        return <EventManagement data={data} saveData={saveData} />;
-                    case 'admin-process':
-                        return <AdminProcess data={data} saveData={saveData} />;
-                    case 'calendar':
-                        return <CalendarView data={data} saveData={saveData} />;
-                    case 'trip-record':
-                        return <TripRecord data={data} saveData={saveData} />;
-                    case 'work-record':
-                        return <WorkRecord data={data} saveData={saveData} />;
-                    case 'announcements':
-                        return <Announcements data={data} saveData={saveData} />;
-                    default:
-                        return <Dashboard data={data} setCurrentPage={setCurrentPage} />;
-                }
-            };
-
-            return (
-                <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50">
-                    {/* 頂部導航 */}
-                    <nav className="bg-white shadow-lg border-b-4 border-indigo-500">
-                        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                            <div className="flex justify-between items-center h-20">
-                                <div className="flex items-center space-x-4">
-                                    <div className="w-12 h-12 bg-gradient-to-br from-indigo-600 to-purple-600 rounded-xl flex items-center justify-center shadow-lg transform rotate-12">
-                                        <Users className="w-7 h-7 text-white -rotate-12" />
-                                    </div>
-                                    <div>
-                                        <h1 className="text-2xl font-bold bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent">
-                                            學生會工作管理系統
-                                        </h1>
-                                        <p className="text-sm text-gray-500">Student Union Management System</p>
-                                    </div>
-                                </div>
-                                <div className="flex items-center space-x-3">
-                                    <button
-                                        onClick={() => setCurrentPage('statistics')}
-                                        className="px-4 py-2 bg-purple-100 text-purple-700 rounded-lg hover:bg-purple-200 transition-all font-medium flex items-center space-x-2"
-                                    >
-                                        <BarChart3 className="w-4 h-4" />
-                                        <span>統計資訊</span>
-                                    </button>
-                                    <button
-                                        onClick={() => setCurrentPage('database')}
-                                        className="px-4 py-2 bg-green-100 text-green-700 rounded-lg hover:bg-green-200 transition-all font-medium flex items-center space-x-2"
-                                    >
-                                        <Database className="w-4 h-4" />
-                                        <span>資料庫</span>
-                                    </button>
-                                    <button
-                                        onClick={exportData}
-                                        className="px-4 py-2 bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200 transition-all font-medium flex items-center space-x-2"
-                                    >
-                                        <Download className="w-4 h-4" />
-                                        <span>匯出</span>
-                                    </button>
-                                    <label className="px-4 py-2 bg-orange-100 text-orange-700 rounded-lg hover:bg-orange-200 transition-all font-medium flex items-center space-x-2 cursor-pointer">
-                                        <Upload className="w-4 h-4" />
-                                        <span>匯入</span>
-                                        <input type="file" accept=".json" onChange={importData} className="hidden" />
-                                    </label>
-                                    <button
-                                        onClick={() => setCurrentPage('dashboard')}
-                                        className="px-6 py-2 bg-indigo-100 text-indigo-700 rounded-lg hover:bg-indigo-200 transition-all font-medium"
-                                    >
-                                        返回主頁
-                                    </button>
-                                </div>
-                            </div>
-                        </div>
-                    </nav>
-
-                    {/* 主要內容 */}
-                    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-                        {renderPage()}
-                    </div>
-
-                    {/* 版權資訊 */}
-                    <footer className="text-center py-8 text-gray-500 text-sm">
-                        <p>© 2026 學生會工作管理系統 - 提升效率，記錄每一刻</p>
-                    </footer>
+        function renderIdeas() {
+            const grid = document.getElementById('ideasGrid');
+            grid.innerHTML = ideas.map((idea, i) => `
+                <div class="idea-card">
+                    <div class="idea-text">${idea}</div>
+                    <button class="delete-idea" onclick="deleteIdea(${i})">🗑️ 刪除</button>
                 </div>
-            );
+            `).join('');
         }
 
-        // 由於篇幅限制，這裡只包含主要組件框架
-        // 完整的組件實現請參考原始 JSX 文件
-
-        // 儀表板組件
-        function Dashboard({ data, setCurrentPage }) {
-            const menuItems = [
-                { id: 'meeting-attendance', title: '開會點名紀錄', description: '記錄會議出席狀況', icon: Users, color: 'from-blue-500 to-cyan-500', count: data.meetings?.length || 0 },
-                { id: 'event-booth', title: '活動顧攤紀錄', description: '記錄顧攤人員報到', icon: CheckCircle, color: 'from-green-500 to-emerald-500', count: data.attendance?.filter(a => a.type === 'booth').length || 0 },
-                { id: 'event-attendance', title: '活動出席紀錄', description: '記錄活動參與人員', icon: Users, color: 'from-purple-500 to-pink-500', count: data.attendance?.filter(a => a.type === 'event').length || 0 },
-                { id: 'event-management', title: '活動紀錄表', description: '從企劃到檢討完整流程', icon: FileText, color: 'from-orange-500 to-red-500', count: data.events?.length || 0 },
-                { id: 'admin-process', title: '會內行政流程', description: '提案審核流程管理', icon: TrendingUp, color: 'from-indigo-500 to-purple-500', count: data.proposals?.length || 0 },
-                { id: 'calendar', title: '會內行事曆', description: '統整所有行程', icon: Calendar, color: 'from-teal-500 to-green-500', count: data.calendar?.length || 0 },
-                { id: 'trip-record', title: '出差紀錄表', description: '記錄外出公務', icon: FileText, color: 'from-yellow-500 to-orange-500', count: data.tripRecords?.length || 0 },
-                { id: 'work-record', title: '工作紀錄表', description: '各部會工作記錄', icon: Clock, color: 'from-pink-500 to-rose-500', count: data.workRecords?.length || 0 },
-                { id: 'announcements', title: '公告紀錄表', description: '經費、規章、聲明', icon: AlertCircle, color: 'from-red-500 to-pink-500', count: data.announcements?.length || 0 }
-            ];
-
-            return (
-                <div className="space-y-8">
-                    <div className="text-center space-y-4">
-                        <h2 className="text-4xl font-bold text-gray-800">歡迎使用學生會管理系統</h2>
-                        <p className="text-xl text-gray-600">選擇功能開始管理您的學生會工作</p>
-                    </div>
-
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                        {menuItems.map((item) => {
-                            const Icon = item.icon;
-                            return (
-                                <button key={item.id} onClick={() => setCurrentPage(item.id)} className="group relative bg-white rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-300 overflow-hidden transform hover:-translate-y-2">
-                                    <div className={`absolute inset-0 bg-gradient-to-br ${item.color} opacity-0 group-hover:opacity-10 transition-opacity`} />
-                                    <div className="p-6 space-y-4">
-                                        <div className="flex items-start justify-between">
-                                            <div className={`w-14 h-14 bg-gradient-to-br ${item.color} rounded-xl flex items-center justify-center shadow-lg`}>
-                                                <Icon className="w-7 h-7 text-white" />
-                                            </div>
-                                            <div className="flex items-center space-x-2">
-                                                <span className="text-2xl font-bold text-gray-800">{item.count}</span>
-                                                <span className="text-sm text-gray-500">筆</span>
-                                            </div>
-                                        </div>
-                                        <div className="text-left">
-                                            <h3 className="text-xl font-bold text-gray-800 mb-2">{item.title}</h3>
-                                            <p className="text-gray-600 text-sm">{item.description}</p>
-                                        </div>
-                                        <div className="flex items-center text-indigo-600 font-semibold group-hover:translate-x-2 transition-transform">
-                                            <span>開始使用</span>
-                                            <ChevronRight className="w-5 h-5 ml-1" />
-                                        </div>
-                                    </div>
-                                </button>
-                            );
-                        })}
-                    </div>
-                </div>
-            );
+        function handleEnter(e) {
+            if (e.key === 'Enter') addIdea();
         }
 
-        // 統計資訊組件（簡化版）
-        function Statistics({ data }) {
-            return (
-                <div className="space-y-8">
-                    <div className="text-center space-y-4">
-                        <h2 className="text-4xl font-bold text-gray-800">統計資訊</h2>
-                        <p className="text-xl text-gray-600">全面掌握學生會運作狀況</p>
-                    </div>
-                    <div className="bg-white rounded-2xl shadow-lg p-8">
-                        <p className="text-gray-600 text-center">統計功能開發中...</p>
-                    </div>
-                </div>
-            );
+        // 正念計時器
+        let timerInterval = null;
+        let remainingTime = 300;
+        let totalTime = 300;
+        let isRunning = false;
+
+        const breathingCycle = [
+            { text: '深深吸氣...', duration: 4 },
+            { text: '屏住呼吸...', duration: 4 },
+            { text: '緩緩呼氣...', duration: 6 },
+            { text: '放鬆休息...', duration: 2 }
+        ];
+        let currentBreathStep = 0;
+        let breathStepTime = 0;
+
+        function setTimer(seconds) {
+            remainingTime = seconds;
+            totalTime = seconds;
+            updateDisplay();
+            resetBreathing();
         }
 
-        // 資料庫管理組件（簡化版）
-        function DatabaseManagement({ data, saveData }) {
-            return (
-                <div className="space-y-6">
-                    <h2 className="text-3xl font-bold text-gray-800">成員資料庫</h2>
-                    <div className="bg-white rounded-xl shadow-lg p-8">
-                        <p className="text-gray-600 text-center">資料庫功能開發中...</p>
-                    </div>
-                </div>
-            );
+        function updateDisplay() {
+            const mins = Math.floor(remainingTime / 60);
+            const secs = remainingTime % 60;
+            document.getElementById('timerDisplay').textContent = 
+                `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
         }
 
-        // 其他組件的簡化版本
-        function MeetingAttendance({ data, saveData }) {
-            return <div className="bg-white rounded-xl shadow-lg p-8"><p className="text-gray-600 text-center">開會點名功能開發中...</p></div>;
+        function startTimer() {
+            if (isRunning) return;
+            isRunning = true;
+            timerInterval = setInterval(() => {
+                if (remainingTime > 0) {
+                    remainingTime--;
+                    updateDisplay();
+                    updateBreathingGuide();
+                } else {
+                    pauseTimer();
+                    document.getElementById('breathingGuide').textContent = '✨ 練習完成！';
+                }
+            }, 1000);
         }
 
-        function EventBooth({ data, saveData }) {
-            return <div className="bg-white rounded-xl shadow-lg p-8"><p className="text-gray-600 text-center">活動顧攤功能開發中...</p></div>;
+        function pauseTimer() {
+            isRunning = false;
+            clearInterval(timerInterval);
         }
 
-        function EventAttendance({ data, saveData }) {
-            return <div className="bg-white rounded-xl shadow-lg p-8"><p className="text-gray-600 text-center">活動出席功能開發中...</p></div>;
+        function resetTimer() {
+            pauseTimer();
+            remainingTime = totalTime;
+            updateDisplay();
+            resetBreathing();
         }
 
-        function EventManagement({ data, saveData }) {
-            return <div className="bg-white rounded-xl shadow-lg p-8"><p className="text-gray-600 text-center">活動管理功能開發中...</p></div>;
+        function resetBreathing() {
+            currentBreathStep = 0;
+            breathStepTime = 0;
+            document.getElementById('breathingGuide').textContent = '';
         }
 
-        function AdminProcess({ data, saveData }) {
-            return <div className="bg-white rounded-xl shadow-lg p-8"><p className="text-gray-600 text-center">行政流程功能開發中...</p></div>;
+        function updateBreathingGuide() {
+            if (!isRunning) return;
+            breathStepTime++;
+            const step = breathingCycle[currentBreathStep];
+            if (breathStepTime === 1) {
+                document.getElementById('breathingGuide').textContent = step.text;
+            }
+            if (breathStepTime >= step.duration) {
+                currentBreathStep = (currentBreathStep + 1) % breathingCycle.length;
+                breathStepTime = 0;
+            }
         }
 
-        function CalendarView({ data, saveData }) {
-            return <div className="bg-white rounded-xl shadow-lg p-8"><p className="text-gray-600 text-center">行事曆功能開發中...</p></div>;
-        }
-
-        function TripRecord({ data, saveData }) {
-            return <div className="bg-white rounded-xl shadow-lg p-8"><p className="text-gray-600 text-center">出差紀錄功能開發中...</p></div>;
-        }
-
-        function WorkRecord({ data, saveData }) {
-            return <div className="bg-white rounded-xl shadow-lg p-8"><p className="text-gray-600 text-center">工作紀錄功能開發中...</p></div>;
-        }
-
-        function Announcements({ data, saveData }) {
-            return <div className="bg-white rounded-xl shadow-lg p-8"><p className="text-gray-600 text-center">公告紀錄功能開發中...</p></div>;
-        }
-
-        // 渲染應用
-        const root = ReactDOM.createRoot(document.getElementById('root'));
-        root.render(<StudentUnionSystem />);
+        // 初始化
+        updateDisplay();
     </script>
 </body>
-
 </html>
