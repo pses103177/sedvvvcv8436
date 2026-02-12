@@ -1,0 +1,813 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>論文管理系統 - 終極版</title>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- React & ReactDOM -->
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    
+    <!-- Babel Standalone -->
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    
+    <!-- Recharts -->
+    <script src="https://unpkg.com/recharts@2.5.0/dist/Recharts.js"></script>
+    
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    
+    <style>
+        body {
+            margin: 0;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+        }
+        
+        .lucide {
+            display: inline-block;
+            vertical-align: middle;
+        }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useEffect } = React;
+        const { AreaChart, Area, BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } = Recharts;
+
+        // Icon 組件
+        const Icon = ({ name, size = 24, className = '' }) => {
+            useEffect(() => {
+                lucide.createIcons();
+            });
+            return React.createElement('i', {
+                'data-lucide': name,
+                className: className,
+                style: { width: size, height: size }
+            });
+        };
+
+        const ThesisManager = () => {
+            const [activeTab, setActiveTab] = useState('dashboard');
+            const [chapters, setChapters] = useState([]);
+            const [goals, setGoals] = useState({ totalWords: 15000, deadline: '', dailyGoal: 500 });
+            const [writingSessions, setWritingSessions] = useState([]);
+            const [pomodoroCount, setPomodoroCount] = useState(0);
+            const [isWriting, setIsWriting] = useState(false);
+            const [currentSession, setCurrentSession] = useState(null);
+            const [pomodoroMode, setPomodoroMode] = useState(false);
+            const [pomodoroTime, setPomodoroTime] = useState(25 * 60);
+            const [isBreak, setIsBreak] = useState(false);
+            const [currentInspiration, setCurrentInspiration] = useState('');
+            const [showAddChapter, setShowAddChapter] = useState(false);
+            const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+            const [shareCode, setShareCode] = useState('');
+            const [showShareModal, setShowShareModal] = useState(false);
+            const [showAIAnalysis, setShowAIAnalysis] = useState(false);
+            const [aiSuggestions, setAiSuggestions] = useState([]);
+
+            const inspirations = [
+                "專注於一個小節，不要想整篇論文有多長",
+                "先寫下所有想法，再去修改和完善",
+                "每天固定時間寫作，養成習慣",
+                "設定小目標，完成一段就獎勵自己",
+                "不要追求完美初稿，重點是把想法寫下來",
+                "卡住時先跳過，寫其他部分",
+                "定期休息，讓大腦充電",
+                "與同學或老師討論，獲得新觀點",
+                "閱讀相關文獻，激發靈感",
+                "用自己的話重述觀點，避免抄襲",
+                "建立大綱，讓寫作有方向",
+                "記錄每天進度，看見成長",
+                "保持好奇心，享受研究過程",
+                "相信自己，你能完成的！",
+                "休息不是浪費時間，是為了更好的產出"
+            ];
+
+            useEffect(() => {
+                loadData();
+                setCurrentInspiration(inspirations[Math.floor(Math.random() * inspirations.length)]);
+                lucide.createIcons();
+            }, []);
+
+            const loadData = () => {
+                try {
+                    const savedChapters = localStorage.getItem('thesis_chapters');
+                    const savedGoals = localStorage.getItem('thesis_goals');
+                    const savedSessions = localStorage.getItem('thesis_sessions');
+                    const savedPomodoro = localStorage.getItem('thesis_pomodoro_count');
+
+                    if (savedChapters) setChapters(JSON.parse(savedChapters));
+                    if (savedGoals) setGoals(JSON.parse(savedGoals));
+                    if (savedSessions) setWritingSessions(JSON.parse(savedSessions));
+                    if (savedPomodoro) setPomodoroCount(JSON.parse(savedPomodoro));
+                } catch (error) {
+                    console.log('首次使用');
+                }
+            };
+
+            const saveData = (key, value) => {
+                try {
+                    localStorage.setItem(key, JSON.stringify(value));
+                } catch (error) {
+                    console.error('儲存失敗:', error);
+                }
+            };
+
+            const addChapter = (title, targetWords, notes = '') => {
+                const chapter = {
+                    id: Date.now(),
+                    title,
+                    targetWords: parseInt(targetWords) || 0,
+                    currentWords: 0,
+                    notes,
+                    createdAt: new Date().toISOString()
+                };
+                const updated = [...chapters, chapter];
+                setChapters(updated);
+                saveData('thesis_chapters', updated);
+            };
+
+            const updateChapter = (id, field, value) => {
+                const updated = chapters.map(ch =>
+                    ch.id === id ? { ...ch, [field]: field.includes('Words') ? parseInt(value) || 0 : value } : ch
+                );
+                setChapters(updated);
+                saveData('thesis_chapters', updated);
+            };
+
+            const deleteChapter = (id) => {
+                const updated = chapters.filter(ch => ch.id !== id);
+                setChapters(updated);
+                saveData('thesis_chapters', updated);
+            };
+
+            const startPomodoro = () => {
+                setPomodoroMode(true);
+                setPomodoroTime(25 * 60);
+                setIsBreak(false);
+                startWriting();
+            };
+
+            const completePomodoroSession = () => {
+                const newCount = pomodoroCount + 1;
+                setPomodoroCount(newCount);
+                saveData('thesis_pomodoro_count', newCount);
+                setPomodoroMode(false);
+                setIsBreak(true);
+            };
+
+            const startWriting = () => {
+                const session = { id: Date.now(), startTime: new Date().toISOString() };
+                setCurrentSession(session);
+                setIsWriting(true);
+            };
+
+            const stopWriting = (wordsWritten = 0) => {
+                if (!currentSession) return;
+                
+                const endTime = new Date();
+                const startTime = new Date(currentSession.startTime);
+                const duration = Math.floor((endTime - startTime) / 60000);
+                
+                const completedSession = {
+                    ...currentSession,
+                    endTime: endTime.toISOString(),
+                    duration,
+                    wordsWritten: parseInt(wordsWritten) || 0
+                };
+                
+                const updated = [...writingSessions, completedSession];
+                setWritingSessions(updated);
+                saveData('thesis_sessions', updated);
+                
+                setCurrentSession(null);
+                setIsWriting(false);
+                setPomodoroMode(false);
+            };
+
+            const refreshInspiration = () => {
+                const newInspiration = inspirations[Math.floor(Math.random() * inspirations.length)];
+                setCurrentInspiration(newInspiration);
+            };
+
+            const generateShareCode = () => {
+                const code = 'SHARE' + Date.now().toString(36).toUpperCase();
+                setShareCode(code);
+                setShowShareModal(true);
+            };
+
+            const analyzeWithAI = () => {
+                const suggestions = [];
+                
+                if (chapters.length === 0) {
+                    suggestions.push({ icon: '🏗️', text: '建議建立論文大綱，有助於組織思路和內容結構' });
+                }
+                
+                const progress = totalTargetWords > 0 ? (totalCurrentWords / totalTargetWords) * 100 : 0;
+                if (progress < 20 && daysLeft && daysLeft < 30) {
+                    suggestions.push({ icon: '⚠️', text: '進度較慢且時間緊迫，建議增加每日寫作時間' });
+                }
+                
+                if (writingSessions.length > 10) {
+                    const avgSession = totalWritingTime / writingSessions.length;
+                    if (avgSession < 20) {
+                        suggestions.push({ icon: '⏱️', text: `平均每次寫作 ${avgSession.toFixed(0)} 分鐘，建議延長至 25-45 分鐘以提升效率` });
+                    }
+                }
+                
+                if (progress > 50) {
+                    suggestions.push({ icon: '🎉', text: '已完成一半以上！繼續保持，勝利在望！' });
+                }
+                
+                if (pomodoroCount > 10) {
+                    suggestions.push({ icon: '🍅', text: `已完成 ${pomodoroCount} 個番茄鐘，專注力很棒！` });
+                }
+                
+                setAiSuggestions(suggestions.length > 0 ? suggestions : [
+                    { icon: '💡', text: '繼續累積寫作數據，AI 將提供更精準的建議' }
+                ]);
+                setShowAIAnalysis(true);
+            };
+
+            const exportReport = () => {
+                const reportText = `
+論文進度報告
+生成時間：${new Date().toLocaleString('zh-TW')}
+
+=== 總體進度 ===
+完成度：${progress.toFixed(1)}%
+目前字數：${totalCurrentWords} / ${totalTargetWords}
+
+=== 寫作統計 ===
+總寫作次數：${writingSessions.length} 次
+總寫作時間：${totalWritingTime} 分鐘
+番茄鐘完成：${pomodoroCount} 個
+
+=== 章節明細 ===
+${chapters.map(ch => `${ch.title}: ${ch.currentWords}/${ch.targetWords}`).join('\n')}
+                `.trim();
+
+                const blob = new Blob([reportText], { type: 'text/plain;charset=utf-8' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `論文進度報告_${new Date().toISOString().split('T')[0]}.txt`;
+                a.click();
+            };
+
+            const totalCurrentWords = chapters.reduce((sum, ch) => sum + ch.currentWords, 0);
+            const totalTargetWords = chapters.reduce((sum, ch) => sum + ch.targetWords, 0) || goals.totalWords;
+            const progress = totalTargetWords > 0 ? (totalCurrentWords / totalTargetWords) * 100 : 0;
+            const daysLeft = goals.deadline ? Math.ceil((new Date(goals.deadline) - new Date()) / (1000 * 60 * 60 * 24)) : null;
+            const totalWritingTime = writingSessions.reduce((sum, s) => sum + s.duration, 0);
+
+            const getLast7DaysData = () => {
+                const last7Days = [];
+                for (let i = 6; i >= 0; i--) {
+                    const date = new Date();
+                    date.setDate(date.getDate() - i);
+                    const dateStr = date.toISOString().split('T')[0];
+                    const sessionsOnDay = writingSessions.filter(s => s.startTime.split('T')[0] === dateStr);
+                    last7Days.push({
+                        date: `${date.getMonth() + 1}/${date.getDate()}`,
+                        words: sessionsOnDay.reduce((sum, s) => sum + s.wordsWritten, 0),
+                    });
+                }
+                return last7Days;
+            };
+
+            const getChapterProgressData = () => {
+                return chapters.map(ch => ({
+                    name: ch.title.length > 12 ? ch.title.substring(0, 12) + '...' : ch.title,
+                    completed: ch.currentWords,
+                    remaining: Math.max(0, ch.targetWords - ch.currentWords),
+                }));
+            };
+
+            const ChapterForm = ({ onSubmit, onCancel }) => {
+                const [title, setTitle] = useState('');
+                const [targetWords, setTargetWords] = useState('');
+                const [notes, setNotes] = useState('');
+
+                return (
+                    <div className="bg-indigo-50 rounded-lg p-4 mb-6 border-2 border-indigo-200">
+                        <h3 className="font-semibold text-gray-800 mb-3">新增章節</h3>
+                        <div className="grid md:grid-cols-2 gap-4 mb-4">
+                            <input
+                                type="text"
+                                placeholder="章節標題"
+                                value={title}
+                                onChange={(e) => setTitle(e.target.value)}
+                                className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500"
+                            />
+                            <input
+                                type="number"
+                                placeholder="目標字數"
+                                value={targetWords}
+                                onChange={(e) => setTargetWords(e.target.value)}
+                                className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500"
+                            />
+                        </div>
+                        <textarea
+                            placeholder="備註（選填）"
+                            value={notes}
+                            onChange={(e) => setNotes(e.target.value)}
+                            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 mb-3"
+                            rows="2"
+                        />
+                        <div className="flex gap-2">
+                            <button
+                                onClick={() => onSubmit(title, targetWords, notes)}
+                                className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 flex items-center gap-2"
+                            >
+                                <Icon name="save" size={18} />
+                                儲存
+                            </button>
+                            <button
+                                onClick={onCancel}
+                                className="px-4 py-2 bg-gray-300 text-gray-700 rounded-lg hover:bg-gray-400"
+                            >
+                                取消
+                            </button>
+                        </div>
+                    </div>
+                );
+            };
+
+            const ChapterCard = ({ chapter }) => (
+                <div className="border-2 border-gray-200 rounded-lg p-4 hover:border-indigo-300 transition-colors">
+                    <div className="flex items-start justify-between mb-3">
+                        <div className="flex-1">
+                            <h3 className="text-lg font-semibold text-gray-800">{chapter.title}</h3>
+                            {chapter.notes && <p className="text-sm text-gray-600 mt-1">{chapter.notes}</p>}
+                        </div>
+                        <button
+                            onClick={() => deleteChapter(chapter.id)}
+                            className="text-red-500 hover:text-red-700 p-2"
+                        >
+                            <Icon name="trash-2" size={18} />
+                        </button>
+                    </div>
+
+                    <div className="grid md:grid-cols-2 gap-4 mb-3">
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">已完成字數</label>
+                            <input
+                                type="number"
+                                value={chapter.currentWords}
+                                onChange={(e) => updateChapter(chapter.id, 'currentWords', e.target.value)}
+                                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500"
+                            />
+                        </div>
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">目標字數</label>
+                            <input
+                                type="number"
+                                value={chapter.targetWords}
+                                onChange={(e) => updateChapter(chapter.id, 'targetWords', e.target.value)}
+                                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500"
+                            />
+                        </div>
+                    </div>
+
+                    <div className="flex items-center gap-3">
+                        <div className="flex-1 bg-gray-200 rounded-full h-2">
+                            <div
+                                className="bg-gradient-to-r from-green-400 to-blue-500 h-2 rounded-full transition-all"
+                                style={{ width: `${Math.min((chapter.currentWords / chapter.targetWords) * 100, 100)}%` }}
+                            />
+                        </div>
+                        <span className="text-sm font-semibold text-gray-700 min-w-[60px] text-right">
+                            {chapter.targetWords > 0 ? `${((chapter.currentWords / chapter.targetWords) * 100).toFixed(0)}%` : '0%'}
+                        </span>
+                    </div>
+                </div>
+            );
+
+            const PomodoroTimer = ({ initialTime, onComplete, onStop }) => {
+                const [timeLeft, setTimeLeft] = useState(initialTime);
+                const [words, setWords] = useState('');
+
+                useEffect(() => {
+                    const interval = setInterval(() => {
+                        setTimeLeft(prev => {
+                            if (prev <= 1) {
+                                clearInterval(interval);
+                                onComplete();
+                                return 0;
+                            }
+                            return prev - 1;
+                        });
+                    }, 1000);
+
+                    return () => clearInterval(interval);
+                }, []);
+
+                const formatTime = (seconds) => {
+                    const m = Math.floor(seconds / 60);
+                    const s = seconds % 60;
+                    return `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+                };
+
+                const progress = ((initialTime - timeLeft) / initialTime) * 100;
+
+                return (
+                    <div>
+                        <div className="relative mb-8">
+                            <svg className="w-64 h-64 mx-auto" viewBox="0 0 200 200">
+                                <circle cx="100" cy="100" r="90" fill="none" stroke="#e5e7eb" strokeWidth="12" />
+                                <circle
+                                    cx="100"
+                                    cy="100"
+                                    r="90"
+                                    fill="none"
+                                    stroke="#f97316"
+                                    strokeWidth="12"
+                                    strokeDasharray={`${2 * Math.PI * 90}`}
+                                    strokeDashoffset={`${2 * Math.PI * 90 * (1 - progress / 100)}`}
+                                    transform="rotate(-90 100 100)"
+                                    className="transition-all duration-1000"
+                                />
+                            </svg>
+                            <div className="absolute inset-0 flex items-center justify-center">
+                                <div className="text-6xl font-bold text-gray-800">{formatTime(timeLeft)}</div>
+                            </div>
+                        </div>
+                        
+                        <div className="mb-6">
+                            <label className="block text-sm font-medium text-gray-700 mb-2">完成字數（選填）</label>
+                            <input
+                                type="number"
+                                value={words}
+                                onChange={(e) => setWords(e.target.value)}
+                                placeholder="輸入字數"
+                                className="w-full max-w-xs mx-auto px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500"
+                            />
+                        </div>
+                        
+                        <button
+                            onClick={() => onStop(words)}
+                            className="flex items-center gap-3 px-8 py-4 bg-gradient-to-r from-red-500 to-orange-500 text-white rounded-full text-xl font-semibold mx-auto hover:shadow-lg transition-all"
+                        >
+                            <Icon name="pause-circle" size={32} />
+                            提前結束
+                        </button>
+                    </div>
+                );
+            };
+
+            return (
+                <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 p-6">
+                    <div className="max-w-7xl mx-auto">
+                        {/* 標題列 */}
+                        <div className="bg-white rounded-2xl shadow-xl p-6 mb-6">
+                            <div className="flex items-center justify-between">
+                                <div className="flex-1">
+                                    <h1 className="text-4xl font-bold text-gray-800 mb-2 flex items-center gap-3">
+                                        <Icon name="book-open" size={40} className="text-indigo-600" />
+                                        論文管理系統
+                                    </h1>
+                                    <p className="text-gray-600">AI 智能管理，助你順利完成論文</p>
+                                </div>
+                                <button
+                                    onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+                                    className="md:hidden p-2 text-gray-600 hover:bg-gray-100 rounded-lg"
+                                >
+                                    <Icon name={mobileMenuOpen ? 'x' : 'menu'} size={24} />
+                                </button>
+                                <button
+                                    onClick={exportReport}
+                                    className="hidden md:flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-green-500 to-teal-500 text-white rounded-lg hover:shadow-lg transition-all"
+                                >
+                                    <Icon name="download" size={20} />
+                                    匯出報告
+                                </button>
+                            </div>
+                        </div>
+
+                        {/* 分頁導航 */}
+                        <div className={`bg-white rounded-2xl shadow-xl p-2 mb-6 ${mobileMenuOpen ? 'block' : 'hidden md:block'}`}>
+                            <div className="grid grid-cols-2 md:flex md:flex-wrap gap-2">
+                                {[
+                                    { id: 'dashboard', label: '總覽', icon: 'trending-up' },
+                                    { id: 'chapters', label: '章節', icon: 'book-open' },
+                                    { id: 'pomodoro', label: '番茄鐘', icon: 'coffee' },
+                                ].map((tab) => (
+                                    <button
+                                        key={tab.id}
+                                        onClick={() => {
+                                            setActiveTab(tab.id);
+                                            setMobileMenuOpen(false);
+                                        }}
+                                        className={`flex items-center justify-center gap-2 px-4 py-3 rounded-lg font-semibold transition-all ${
+                                            activeTab === tab.id
+                                                ? 'bg-gradient-to-r from-indigo-600 to-purple-600 text-white shadow-lg'
+                                                : 'text-gray-600 hover:bg-gray-100'
+                                        }`}
+                                    >
+                                        <Icon name={tab.icon} size={20} />
+                                        <span className="hidden sm:inline">{tab.label}</span>
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
+
+                        {/* 內容區域 */}
+                        <div>
+                            {activeTab === 'dashboard' && (
+                                <div className="space-y-6">
+                                    {/* 靈感卡片 */}
+                                    <div className="bg-gradient-to-r from-yellow-400 to-orange-400 rounded-xl shadow-lg p-6 text-white">
+                                        <div className="flex items-start justify-between gap-3">
+                                            <div className="flex-1">
+                                                <div className="flex items-center gap-2 mb-2">
+                                                    <Icon name="sparkles" size={24} />
+                                                    <h3 className="text-xl font-bold">今日靈感</h3>
+                                                </div>
+                                                <p className="text-lg">{currentInspiration}</p>
+                                            </div>
+                                            <button
+                                                onClick={refreshInspiration}
+                                                className="p-2 bg-white/20 rounded-lg hover:bg-white/30 transition-all"
+                                            >
+                                                <Icon name="refresh-cw" size={20} />
+                                            </button>
+                                        </div>
+                                    </div>
+
+                                    {/* 進度卡片 */}
+                                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                                        <div className="bg-gradient-to-br from-indigo-500 to-purple-600 rounded-xl shadow-lg p-6 text-white">
+                                            <div className="flex items-center justify-between mb-2">
+                                                <h3 className="text-lg font-semibold">總進度</h3>
+                                                <Icon name="trending-up" size={24} />
+                                            </div>
+                                            <div className="text-4xl font-bold">{progress.toFixed(1)}%</div>
+                                            <div className="mt-3 bg-white/20 rounded-full h-2">
+                                                <div className="bg-white h-2 rounded-full transition-all" style={{ width: `${Math.min(progress, 100)}%` }} />
+                                            </div>
+                                        </div>
+
+                                        <div className="bg-gradient-to-br from-blue-500 to-cyan-600 rounded-xl shadow-lg p-6 text-white">
+                                            <div className="flex items-center justify-between mb-2">
+                                                <h3 className="text-lg font-semibold">字數</h3>
+                                                <Icon name="book-open" size={24} />
+                                            </div>
+                                            <div className="text-4xl font-bold">{totalCurrentWords.toLocaleString()}</div>
+                                            <div className="text-sm mt-1 opacity-90">/ {totalTargetWords.toLocaleString()}</div>
+                                        </div>
+
+                                        <div className="bg-gradient-to-br from-orange-500 to-red-600 rounded-xl shadow-lg p-6 text-white">
+                                            <div className="flex items-center justify-between mb-2">
+                                                <h3 className="text-lg font-semibold">番茄鐘</h3>
+                                                <Icon name="coffee" size={24} />
+                                            </div>
+                                            <div className="text-4xl font-bold">{pomodoroCount}</div>
+                                            <div className="text-sm mt-1 opacity-90">已完成</div>
+                                        </div>
+
+                                        <div className="bg-gradient-to-br from-green-500 to-teal-600 rounded-xl shadow-lg p-6 text-white">
+                                            <div className="flex items-center justify-between mb-2">
+                                                <h3 className="text-lg font-semibold">時間</h3>
+                                                <Icon name="clock" size={24} />
+                                            </div>
+                                            <div className="text-4xl font-bold">{totalWritingTime}</div>
+                                            <div className="text-sm mt-1 opacity-90">分鐘</div>
+                                        </div>
+                                    </div>
+
+                                    {/* 圖表 */}
+                                    <div className="grid md:grid-cols-2 gap-6">
+                                        <div className="bg-white rounded-xl shadow-lg p-6">
+                                            <h3 className="text-xl font-bold text-gray-800 mb-4">近 7 天趨勢</h3>
+                                            <ResponsiveContainer width="100%" height={250}>
+                                                <AreaChart data={getLast7DaysData()}>
+                                                    <defs>
+                                                        <linearGradient id="colorWords" x1="0" y1="0" x2="0" y2="1">
+                                                            <stop offset="5%" stopColor="#6366f1" stopOpacity={0.8}/>
+                                                            <stop offset="95%" stopColor="#6366f1" stopOpacity={0}/>
+                                                        </linearGradient>
+                                                    </defs>
+                                                    <CartesianGrid strokeDasharray="3 3" />
+                                                    <XAxis dataKey="date" />
+                                                    <YAxis />
+                                                    <Tooltip />
+                                                    <Area type="monotone" dataKey="words" stroke="#6366f1" fillOpacity={1} fill="url(#colorWords)" />
+                                                </AreaChart>
+                                            </ResponsiveContainer>
+                                        </div>
+
+                                        <div className="bg-white rounded-xl shadow-lg p-6">
+                                            <h3 className="text-xl font-bold text-gray-800 mb-4">章節進度</h3>
+                                            <ResponsiveContainer width="100%" height={250}>
+                                                <BarChart data={getChapterProgressData()}>
+                                                    <CartesianGrid strokeDasharray="3 3" />
+                                                    <XAxis dataKey="name" />
+                                                    <YAxis />
+                                                    <Tooltip />
+                                                    <Legend />
+                                                    <Bar dataKey="completed" stackId="a" fill="#10b981" name="已完成" />
+                                                    <Bar dataKey="remaining" stackId="a" fill="#e5e7eb" name="剩餘" />
+                                                </BarChart>
+                                            </ResponsiveContainer>
+                                        </div>
+                                    </div>
+
+                                    {/* 快速動作 */}
+                                    <div className="bg-white rounded-xl shadow-lg p-6">
+                                        <h3 className="text-xl font-bold text-gray-800 mb-4">快速開始</h3>
+                                        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                                            <button
+                                                onClick={() => setActiveTab('pomodoro')}
+                                                className="flex flex-col items-center justify-center gap-3 p-4 bg-gradient-to-r from-orange-500 to-red-500 text-white rounded-lg hover:shadow-lg transition-all"
+                                            >
+                                                <Icon name="coffee" size={24} />
+                                                <span className="font-semibold">番茄鐘</span>
+                                            </button>
+                                            <button
+                                                onClick={analyzeWithAI}
+                                                className="flex flex-col items-center justify-center gap-3 p-4 bg-gradient-to-r from-purple-500 to-pink-500 text-white rounded-lg hover:shadow-lg transition-all"
+                                            >
+                                                <Icon name="brain" size={24} />
+                                                <span className="font-semibold">AI 分析</span>
+                                            </button>
+                                            <button
+                                                onClick={generateShareCode}
+                                                className="flex flex-col items-center justify-center gap-3 p-4 bg-gradient-to-r from-blue-500 to-cyan-500 text-white rounded-lg hover:shadow-lg transition-all"
+                                            >
+                                                <Icon name="share-2" size={24} />
+                                                <span className="font-semibold">分享</span>
+                                            </button>
+                                            <button
+                                                onClick={exportReport}
+                                                className="flex flex-col items-center justify-center gap-3 p-4 bg-gradient-to-r from-green-500 to-teal-500 text-white rounded-lg hover:shadow-lg transition-all"
+                                            >
+                                                <Icon name="download" size={24} />
+                                                <span className="font-semibold">匯出</span>
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
+
+                            {activeTab === 'chapters' && (
+                                <div className="bg-white rounded-xl shadow-lg p-6">
+                                    <div className="flex items-center justify-between mb-6">
+                                        <h2 className="text-2xl font-bold text-gray-800">章節管理</h2>
+                                        <button
+                                            onClick={() => setShowAddChapter(!showAddChapter)}
+                                            className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700"
+                                        >
+                                            <Icon name="plus" size={20} />
+                                            新增章節
+                                        </button>
+                                    </div>
+
+                                    {showAddChapter && (
+                                        <ChapterForm
+                                            onSubmit={(title, targetWords, notes) => {
+                                                addChapter(title, targetWords, notes);
+                                                setShowAddChapter(false);
+                                            }}
+                                            onCancel={() => setShowAddChapter(false)}
+                                        />
+                                    )}
+
+                                    {chapters.length === 0 ? (
+                                        <div className="text-center py-12 text-gray-500">
+                                            <Icon name="book-open" size={48} className="mx-auto mb-3 opacity-50" />
+                                            <p>尚未新增章節</p>
+                                        </div>
+                                    ) : (
+                                        <div className="space-y-4">
+                                            {chapters.map((chapter) => (
+                                                <ChapterCard key={chapter.id} chapter={chapter} />
+                                            ))}
+                                        </div>
+                                    )}
+                                </div>
+                            )}
+
+                            {activeTab === 'pomodoro' && (
+                                <div className="bg-white rounded-xl shadow-lg p-8 text-center">
+                                    <h2 className="text-3xl font-bold text-gray-800 mb-6 flex items-center justify-center gap-3">
+                                        <Icon name="coffee" size={36} className="text-orange-500" />
+                                        番茄鐘工作法
+                                    </h2>
+                                    
+                                    {!pomodoroMode && !isBreak ? (
+                                        <div>
+                                            <div className="text-6xl font-bold text-gray-400 mb-8">25:00</div>
+                                            <p className="text-gray-600 mb-6">專注 25 分鐘，然後休息 5 分鐘</p>
+                                            <button
+                                                onClick={startPomodoro}
+                                                className="flex items-center gap-3 px-8 py-4 bg-gradient-to-r from-orange-500 to-red-500 text-white rounded-full text-xl font-semibold mx-auto hover:shadow-lg transition-all"
+                                            >
+                                                <Icon name="play-circle" size={32} />
+                                                開始番茄鐘
+                                            </button>
+                                            <div className="mt-8 text-gray-600">
+                                                <p className="font-semibold">已完成 {pomodoroCount} 個番茄鐘 🍅</p>
+                                            </div>
+                                        </div>
+                                    ) : isBreak ? (
+                                        <div>
+                                            <div className="text-6xl font-bold text-green-600 mb-8">休息時間 ☕</div>
+                                            <p className="text-lg text-gray-600 mb-6">做得好！休息一下，補充能量</p>
+                                            <button
+                                                onClick={() => { setIsBreak(false); setPomodoroMode(false); }}
+                                                className="px-6 py-3 bg-green-500 text-white rounded-lg hover:bg-green-600"
+                                            >
+                                                結束休息
+                                            </button>
+                                        </div>
+                                    ) : (
+                                        <PomodoroTimer
+                                            initialTime={pomodoroTime}
+                                            onComplete={completePomodoroSession}
+                                            onStop={stopWriting}
+                                        />
+                                    )}
+                                </div>
+                            )}
+                        </div>
+                    </div>
+
+                    {/* AI 分析 Modal */}
+                    {showAIAnalysis && (
+                        <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50" onClick={() => setShowAIAnalysis(false)}>
+                            <div className="bg-white rounded-2xl p-6 max-w-2xl w-full max-h-[80vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+                                <div className="flex items-center justify-between mb-6">
+                                    <h2 className="text-2xl font-bold text-gray-800 flex items-center gap-2">
+                                        <Icon name="brain" size={28} className="text-purple-600" />
+                                        AI 智能分析
+                                    </h2>
+                                    <button onClick={() => setShowAIAnalysis(false)} className="p-2 hover:bg-gray-100 rounded-lg">
+                                        <Icon name="x" size={24} />
+                                    </button>
+                                </div>
+                                <div className="space-y-4">
+                                    {aiSuggestions.map((suggestion, index) => (
+                                        <div key={index} className="flex items-start gap-3 p-4 bg-gradient-to-r from-purple-50 to-pink-50 rounded-lg border border-purple-200">
+                                            <span className="text-3xl flex-shrink-0">{suggestion.icon}</span>
+                                            <p className="text-gray-800">{suggestion.text}</p>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* 分享 Modal */}
+                    {showShareModal && (
+                        <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50" onClick={() => setShowShareModal(false)}>
+                            <div className="bg-white rounded-2xl p-6 max-w-md w-full" onClick={(e) => e.stopPropagation()}>
+                                <div className="flex items-center justify-between mb-6">
+                                    <h2 className="text-2xl font-bold text-gray-800 flex items-center gap-2">
+                                        <Icon name="share-2" size={28} className="text-blue-600" />
+                                        分享進度
+                                    </h2>
+                                    <button onClick={() => setShowShareModal(false)} className="p-2 hover:bg-gray-100 rounded-lg">
+                                        <Icon name="x" size={24} />
+                                    </button>
+                                </div>
+                                <div className="bg-gradient-to-r from-blue-50 to-cyan-50 p-6 rounded-lg mb-4">
+                                    <p className="text-gray-600 mb-3">分享代碼</p>
+                                    <div className="flex items-center gap-2">
+                                        <code className="flex-1 text-2xl font-bold text-indigo-600 bg-white px-4 py-3 rounded-lg">{shareCode}</code>
+                                        <button
+                                            onClick={() => {
+                                                navigator.clipboard.writeText(shareCode);
+                                                alert('已複製！');
+                                            }}
+                                            className="p-3 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700"
+                                        >
+                                            <Icon name="copy" size={20} />
+                                        </button>
+                                    </div>
+                                </div>
+                                <div className="text-sm text-gray-600 space-y-2">
+                                    <p>✅ 指導教授可使用此代碼查看你的進度</p>
+                                    <p>✅ 僅分享統計數據，不包含文章內容</p>
+                                    <p>✅ 代碼有效期 30 天</p>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+                </div>
+            );
+        };
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<ThesisManager />);
+    </script>
+</body>
+</html>
